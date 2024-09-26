@@ -47,6 +47,17 @@ class CategoryListAPIView(generics.ListAPIView):
 
         return queryset    
 
+class CreateCategoryAPIView(CreateAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer 
+
+    #permission_classes = [IsAuthenticated]
+    #authentication_classes = [JWTAuthentication]
+    #parser_classes = [MultiPartParser, FormParser]
+
+
+
+    
 class SubcategoryListAPIView(generics.ListAPIView):
     queryset = Subcategory.objects.all()
     serializer_class = SubcategorySerializer
@@ -109,21 +120,39 @@ class UpdateProductAPIView(RetrieveUpdateAPIView):
 
 
 
-class CreateProductAPIView(APIView):
+class CreateProductAPIView(CreateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer 
+
     permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [JWTAuthentication] 
     parser_classes = [MultiPartParser, FormParser]
 
-    def post(self, request, *args, **kwargs):
-        serializer = ProductSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=HTTP_201_CREATED)
-        return Response(serializer.errors, status=HTTP_400_BAD_REQUEST)
-
-    pass
 
 class DeleteProductAPIView(DestroyAPIView):
     permission_classes = [IsAuthenticated]
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+
+#Comments
+
+#class CreateCommentAPIView(generics.CreateAPIView):
+    #serializer_class = CommentSerializer
+
+    #def perform_create(self, serializer):
+        #serializer.save(user=self.request.user)
+
+#class RetrieveCommentsAPIView(generics.ListAPIView):
+    #serializer_class = CommentSerializer
+
+    #def get_queryset(self):
+        #product_id = self.kwargs['product_pk']
+        #return Comment.objects.filter(product_id=product_id)
+
+#class DeleteCommentAPIView(generics.DestroyAPIView):
+    #serializer_class = CommentSerializer
+    #permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]  # Ensure only the comment owner can delete
+
+    #def get_queryset(self):
+        #product_id = self.kwargs['product_pk']
+        #return Comment.objects.filter(product_id=product_id)

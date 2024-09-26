@@ -7,7 +7,8 @@ from .views import (
     UpdateProductAPIView,
     RetrieveProductAPIView,
     CategoryListAPIView,
-    SubcategoryListAPIView
+    SubcategoryListAPIView,
+    CreateCategoryAPIView,
 )
 
 from rest_framework_simplejwt.views import (TokenObtainPairView,TokenRefreshView)
@@ -21,7 +22,8 @@ urlpatterns = [
     path('products/<int:pk>/delete/', DeleteProductAPIView.as_view(), name='product-delete'),
     path('categories/', CategoryListAPIView.as_view(), name='category-list'),
     path('subcategories/', SubcategoryListAPIView.as_view(), name='subcategory-list'),
-    
+    path('category/create/',CreateCategoryAPIView.as_view(),name='category-create'),
+
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]

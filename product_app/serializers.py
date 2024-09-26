@@ -19,3 +19,11 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product 
 
         fields = '__all__' 
+
+
+
+#class CommentSerializer(serializers.ModelSerializer):
+    #class Meta:
+        #model = Comment
+        #fields   = ('id', 'user', 'text', 'created_at')
+        #read_only_fields = ('id', 'created_at')
