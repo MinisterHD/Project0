@@ -13,13 +13,6 @@ class Subcategory(models.Model):
     slugname = models.SlugField(max_length=255, unique=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
 
-#class Comment(models.Model):
-    #product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='comments')
-    #user = models.ForeignKey(User, on_delete=models.CASCADE)
-    #text = models.TextField()
-    #created_at = models.DateTimeField(auto_now_add=True)
-
-
 class Product(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField()
@@ -28,9 +21,19 @@ class Product(models.Model):
     category=models.ForeignKey(Category,on_delete=models.CASCADE)
     image = models.ImageField(upload_to='products/', blank=True) 
     subcategory = models.ForeignKey(Subcategory, on_delete=models.CASCADE, blank=True, null=True)
-    #comments = models.ManyToManyField(Comment, related_name='products')
-
+    
     def __str__(self):
         return self.name
 
+
+
+class Comment(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+
+    
 

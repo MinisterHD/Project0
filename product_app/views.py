@@ -7,8 +7,9 @@ from rest_framework.response import Response
 from rest_framework.generics import CreateAPIView,RetrieveAPIView,RetrieveUpdateAPIView
 from .models import *
 from .serializers import *
+from rest_framework import viewsets
 from rest_framework import generics
-from rest_framework.generics import GenericAPIView
+from rest_framework.generics import GenericAPIView,RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.status import HTTP_204_NO_CONTENT,HTTP_201_CREATED
@@ -47,13 +48,19 @@ class CategoryListAPIView(generics.ListAPIView):
 
         return queryset    
 
-class CreateCategoryAPIView(CreateAPIView):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer 
-
+class CategoryAPIView(RetrieveUpdateDestroyAPIView):
+    
     #permission_classes = [IsAuthenticated]
     #authentication_classes = [JWTAuthentication]
     #parser_classes = [MultiPartParser, FormParser]
+
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    #PUT meothod updates
+    #GET method retrieves
+    #DELETE method deletes
+
+
 
 
 
@@ -136,23 +143,25 @@ class DeleteProductAPIView(DestroyAPIView):
 
 #Comments
 
-#class CreateCommentAPIView(generics.CreateAPIView):
-    #serializer_class = CommentSerializer
+class CreateCommentAPIView(generics.CreateAPIView):
+    serializer_class = CommentSerializer
 
-    #def perform_create(self, serializer):
-        #serializer.save(user=self.request.user)
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
-#class RetrieveCommentsAPIView(generics.ListAPIView):
-    #serializer_class = CommentSerializer
+class RetrieveCommentsAPIView(generics.ListAPIView):
+    serializer_class = CommentSerializer
 
-    #def get_queryset(self):
-        #product_id = self.kwargs['product_pk']
-        #return Comment.objects.filter(product_id=product_id)
+    def get_queryset(self):
+        product_id = self.kwargs['product_pk']
+        return Comment.objects.filter(product_id=product_id)
 
-#class DeleteCommentAPIView(generics.DestroyAPIView):
-    #serializer_class = CommentSerializer
-    #permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]  # Ensure only the comment owner can delete
-
-    #def get_queryset(self):
-        #product_id = self.kwargs['product_pk']
-        #return Comment.objects.filter(product_id=product_id)
+class DeleteCommentAPIView(generics.DestroyAPIView):
+    serializer_class = CommentSerializer
+    #permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]  
+    
+    def get_queryset(self):
+        product_id = self.kwargs['product_pk']
+        return Comment.objects.filter(product_id=product_id)
