@@ -21,6 +21,14 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = '__all__' 
 
 
+class RatingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Rating
+        fields = ['id', 'user', 'product', 'rating', 'created_at']
+        read_only_fields = ['user', 'created_at']
+
+
+
 
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
