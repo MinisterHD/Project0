@@ -1,9 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-
-
-
 class Category(models.Model):
     name = models.CharField(max_length=255, unique=True)
     slugname = models.SlugField(max_length=255, unique=True)
@@ -20,12 +17,10 @@ class Product(models.Model):
     stock = models.IntegerField()
     category=models.ForeignKey(Category,on_delete=models.CASCADE)
     image = models.ImageField(upload_to='products/', blank=True) 
+    product_descriptions=models.TextField(max_length=500,blank=True)
     subcategory = models.ForeignKey(Subcategory, on_delete=models.CASCADE, blank=True, null=True)
-    
     def __str__(self):
         return self.name
-
-
 
 class Comment(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='comments')
