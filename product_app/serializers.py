@@ -28,10 +28,8 @@ class RatingSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'created_at']
 
 
-
-
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
-        fields   = ('id', 'user', 'text', 'created_at',"product")
+        fields   = ('id', 'owner', 'text', 'created_at',"product")
         read_only_fields = ('id', 'created_at')

@@ -1,7 +1,6 @@
 
 from .models import *
 from .serializers import *
-from .serializers import *
 from .permissions import *
 
 from rest_framework import status
@@ -128,17 +127,19 @@ class CreateCommentAPIView(generics.CreateAPIView):
     authentication_classes = [JWTAuthentication]
     serializer_class = CommentSerializer
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save(owner=self.request.user)
 
 class CommentAPIView(RetrieveUpdateDestroyAPIView):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    parser_classes = [JSONParser,MultiPartParser, FormParser ]
+
     lookup_url_kwarg = 'comment_id'
     def get_queryset(self):
         if self.request.user.is_superuser:
             return self.queryset
-        return self.queryset.filter(user=self.request.user)
+        return self.queryset.filter(owner=self.request.user)
     #PUT meothod updates
     #GET method retrieves
     #DELETE method deletes
@@ -161,7 +162,6 @@ class CreateRatingAPIView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
-
 
 class RatingAPIView(RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
