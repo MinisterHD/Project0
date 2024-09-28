@@ -147,7 +147,7 @@ class CommentAPIView(RetrieveUpdateDestroyAPIView):
 #Rating
 class CreateRatingAPIView(generics.CreateAPIView):
     queryset = Rating.objects.all()
-    serializer_class = RatingSerializer
+    serializer_class = RatingCreateSerializer
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
 
@@ -167,7 +167,7 @@ class RatingAPIView(RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
     authentication_classes = [JWTAuthentication]
     queryset = Rating.objects.all()
-    serializer_class = RatingSerializer
+    serializer_class = RatingUpdateSerializer
     lookup_url_kwarg = 'rating_id'
 
 

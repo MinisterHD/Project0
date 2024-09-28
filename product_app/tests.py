@@ -278,7 +278,7 @@ class RatingAPITestCase(APITestCase):
     def test_update_rating(self):
         rating = Rating.objects.create(product=self.product, user=self.user, rating=4)
         url = reverse('rating-detail', kwargs={'rating_id': rating.id})
-        updated_data = {"product":1,'rating':3}
+        updated_data = {'rating':3}
         response = self.client.put(url, updated_data, format='json')
         print(response.content)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
