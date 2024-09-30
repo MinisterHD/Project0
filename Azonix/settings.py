@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     'order_app',
     'report_app',
     'review_app',
-     
+    'django_filters',
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
@@ -87,8 +87,12 @@ WSGI_APPLICATION = 'Azonix.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'azonix_database',
+        'USER': 'admin',
+        'PASSWORD': 'admin',
+        'HOST': 'localhost',  # Adjust if necessary
+        'PORT': '5432',  # Adjust if necessary
     }
 }
 
@@ -134,7 +138,10 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
+
+        'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend', 'rest_framework.filters.SearchFilter'],   
+        'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication'

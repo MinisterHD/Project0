@@ -1,23 +1,32 @@
 
+from django.db.models import Q
 from .models import *
 from .serializers import *
 from .permissions import *
 
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework import generics,filters
 from rest_framework.generics import (CreateAPIView,RetrieveUpdateDestroyAPIView,
-     ListAPIView,CreateAPIView)
+                                        ListAPIView,CreateAPIView)
 from rest_framework.permissions import IsAuthenticated,IsAuthenticatedOrReadOnly
-from rest_framework.parsers import MultiPartParser, FormParser,JSONParser 
+from rest_framework.parsers import JSONParser,MultiPartParser,FormParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.exceptions import ValidationError
+
 
 #Category
 class CreateCategoryAPIView(CreateAPIView):
     serializer_class = CategorySerializer 
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication] 
-    parser_classes = [JSONParser ]
+    parser_classes = [JSONParser]
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'status': 'success', 'data': serializer.data}, status=status.HTTP_201_CREATED)
 
 class CategoryListAPIView(generics.ListAPIView):
     queryset = Category.objects.all() 
@@ -74,37 +83,55 @@ class SubcategoryAPIView(RetrieveUpdateDestroyAPIView):
 class ProductListAPIView(ListAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name']
+
     def get_queryset(self):
         queryset = super().get_queryset()
         params = self.request.query_params
-        if 'category' in params:
-            category_id = params['category']
-            queryset = queryset.filter(category_id=category_id)
 
-        if 'subcategory' in params:
-            subcategory_id = params['subcategory']
-            queryset = queryset.filter(subcategory_id=subcategory_id)
+        # Validate category and subcategory IDs using OR logic for flexibility
+        category_id = params.get('category')
+        subcategory_id = params.get('subcategory')
+        if category_id or subcategory_id:
+            try:
+                if category_id:
+                    Category.objects.get(id=category_id)
+                if subcategory_id:
+                    Subcategory.objects.get(id=subcategory_id)
+            except (Category.DoesNotExist, Subcategory.DoesNotExist):
+                raise ValidationError("Invalid category or subcategory ID(s) provided.")
 
-        if 'price' in params:
-            min_price = params.get('price', {}).get('minPrice')
-            max_price = params.get('price', {}).get('maxPrice')
-            if min_price:
-                queryset = queryset.filter(price__gte=min_price)
-            if max_price:
-                queryset = queryset.filter(price__lt=max_price)
+        # Filter by category and subcategory using OR logic for flexibility
+        if category_id or subcategory_id:
+            queryset = queryset.filter(Q(category_id=category_id) | Q(subcategory_id=subcategory_id))
 
-        if 'sort' in params:
-            order_by = params['sort']
-            queryset = queryset.order_by(order_by)
+        # Filter by price range
+        min_price = params.get('minPrice')
+        max_price = params.get('maxPrice')
+        if min_price:
+            queryset = queryset.filter(price__gte=float(min_price))
+        if max_price:
+            queryset = queryset.filter(price__lte=float(max_price))
+
+        # Sort by specified field, providing a default sort field if not provided
+        sort_field = params.get('sort', 'category')
+        if sort_field:
+            queryset = queryset.order_by(sort_field)
         return queryset
-    
+
 class CreateProductAPIView(CreateAPIView):
     queryset = Product.objects.all()
-    serializer_class = ProductSerializer 
+    serializer_class = ProductSerializer
     permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication] 
-    parser_classes = [JSONParser ]
+    authentication_classes = [JWTAuthentication]
+    parser_classes = [JSONParser]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 class ProductAPIView(RetrieveUpdateDestroyAPIView):
     queryset = Product.objects.all()
@@ -133,9 +160,10 @@ class CommentAPIView(RetrieveUpdateDestroyAPIView):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
-    parser_classes = [JSONParser,MultiPartParser, FormParser ]
+    parser_classes = [JSONParser]
 
     lookup_url_kwarg = 'comment_id'
+
     def get_queryset(self):
         if self.request.user.is_superuser:
             return self.queryset

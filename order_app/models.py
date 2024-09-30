@@ -1,8 +1,5 @@
 from django.db import models
-
-from django.db import models
 from django.contrib.auth.models import User
-from django.contrib.auth.models import AbstractUser
 from django.db.models import Q
 from django.contrib.auth.models import Permission, Group
 from product_app.models import Product
@@ -14,5 +11,5 @@ class Order(models.Model):
     delivery_status = models.CharField(max_length=20, choices=[('pending', 'Pending'), ('shipped', 'Shipped'), ('delivered', 'Delivered'), ('cancelled', 'Cancelled')])
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     order_date = models.DateTimeField(auto_now_add=True)
-    #delivery_date=models.DateTimeField() 
+    delivery_date=models.DateTimeField(auto_now_add=True,null=True) 
 

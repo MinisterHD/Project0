@@ -5,9 +5,7 @@ from .models import *
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = '__all__' 
-
-
+        fields = ['id', 'name', 'slugname']
 
 class SubcategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -17,21 +15,20 @@ class SubcategorySerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product 
-
-        fields = '__all__' 
+        fields = ('__all__' )
+        read_only_fields = ['id','created_at']
 
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields   = ('id', 'owner', 'text', 'created_at',"product")
-        read_only_fields = ('id', 'created_at')
+        read_only_fields = ['id', 'created_at']
 
 class RatingCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rating
         fields = ['id', 'user', 'product', 'rating', 'created_at']
         read_only_fields = ['user', 'created_at']
-
 
 class RatingUpdateSerializer(serializers.ModelSerializer):
     class Meta:
