@@ -28,7 +28,7 @@ class Rating(models.Model):
 
 class Product(models.Model):
     name = models.CharField(max_length=255,unique=True)
-    slugname=models.SlugField(max_length=255,unique=True)
+    slugname=models.SlugField(max_length=255,unique=True,default='default-slug')
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2,null=False, blank=False)
     stock = models.IntegerField()

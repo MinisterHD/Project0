@@ -87,14 +87,11 @@ WSGI_APPLICATION = 'Azonix.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'azonix_database',
-        'USER': 'admin',
-        'PASSWORD': 'admin',
-        'HOST': 'localhost',  # Adjust if necessary
-        'PORT': '5432',  # Adjust if necessary
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
 
 
 # Password validation

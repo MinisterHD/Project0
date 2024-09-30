@@ -136,7 +136,7 @@ class CreateProductAPIView(CreateAPIView):
 class ProductAPIView(RetrieveUpdateDestroyAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    #permission_classes = [IsAuthenticatedOrReadOnly]
     lookup_url_kwarg = 'product_id'
     #PUT meothod updates
     #GET method retrieves
