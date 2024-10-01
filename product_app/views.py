@@ -56,7 +56,12 @@ class CreateSubcategoryAPIView(CreateAPIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication] 
     parser_classes = [JSONParser ]
-
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'status': 'success', 'data': serializer.data}, status=status.HTTP_201_CREATED) 
+       
 class SubcategoryListAPIView(generics.ListAPIView):
     queryset = Subcategory.objects.all()
     serializer_class = SubcategorySerializer
@@ -123,7 +128,7 @@ class ProductListAPIView(ListAPIView):
 class CreateProductAPIView(CreateAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
 

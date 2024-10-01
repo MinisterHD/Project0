@@ -30,6 +30,7 @@ class CategoryTests(APITestCase):
 
     def test_list_categories(self):
         response = self.client.get(self.list_url, HTTP_AUTHORIZATION=f'Bearer {self.token}',format='json')
+        
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['name'], self.category.name)
@@ -69,16 +70,18 @@ class SubcategoryTestCase(APITestCase):
             'slugname': 'new-slugname',
             'category': self.category.id
         }
+        
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
         response = self.client.post(url, data, HTTP_AUTHORIZATION=f'Bearer {self.token}',format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Subcategory.objects.count(), 2)
-        self.assertEqual(Subcategory.objects.get(id=response.data['id']).name, 'New Subcategory')
+        self.assertEqual(Subcategory.objects.get(id=response.data['data']['id']).name, 'New Subcategory')
 
 
     def test_list_subcategories(self):
         url = reverse('subcategory-list')
         response = self.client.get(url, HTTP_AUTHORIZATION=f'Bearer {self.token}',format='json')
+        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['name'], self.subcategory.name)
@@ -121,11 +124,12 @@ class ProductTests(APITestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = User.objects.create_user(username='testuser', password='testpassword')
-        self.category = Category.objects.create(name='Electronics')
+        self.category = Category.objects.create(name='Electronics',slugname='electronics')
         self.subcategory = Subcategory.objects.create(name='Mobile Phones', category=self.category)
         self.product = Product.objects.create(
             name='iPhone',
             slugname='iPhone',
+            brand='sony',
             description='Latest iPhone model',
             price=2000,
             stock=10,
@@ -140,6 +144,7 @@ class ProductTests(APITestCase):
         response = self.client.get(url,format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
+        
 
     def test_create_product(self):
         url = reverse('create-product')
@@ -150,6 +155,7 @@ class ProductTests(APITestCase):
             'price': 900,
             'stock': 15,
             'category': self.category.id,
+            'brand':'sony',
             'subcategory': self.subcategory.id
         
         }

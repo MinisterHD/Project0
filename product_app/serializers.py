@@ -5,18 +5,23 @@ from .models import *
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id', 'name', 'slugname']
+        fields = ['id', 'name', 'slugname',]
 
 class SubcategorySerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
     class Meta:
         model = Subcategory
         fields = '__all__'  
 
 class ProductSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
+
     class Meta:
-        model = Product 
-        fields = ('__all__' )
-        read_only_fields = ['id','created_at']
+        model = Product
+        fields = '__all__' 
+        read_only_fields = ["id", "created_at"]
 
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
