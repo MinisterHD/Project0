@@ -4,7 +4,7 @@ from .views import (
     CreateSubcategoryAPIView, SubcategoryListAPIView, SubcategoryAPIView,
     ProductListAPIView, CreateProductAPIView, ProductAPIView,
     CommentListAPIView, CreateCommentAPIView, CommentAPIView,
-    CreateRatingAPIView, RatingAPIView
+    CreateRatingAPIView, RatingAPIView,RatingListAPIView
 )
 
 urlpatterns = [
@@ -19,19 +19,21 @@ urlpatterns = [
     path('subcategories/<int:subcategory_id>/', SubcategoryAPIView.as_view(), name='subcategory-detail'),
 
     # Product
-    path('products/', ProductListAPIView.as_view(), name='product-list'),
     path('products/create/', CreateProductAPIView.as_view(), name='create-product'),
+    path('products/', ProductListAPIView.as_view(), name='product-list'),
     path('products/<int:product_id>/', ProductAPIView.as_view(), name='product-detail'),
 
     # Comment
-    path('products/<int:product_id>/comments/', CommentListAPIView.as_view(), name='comment-list'),
     path('comments/create/', CreateCommentAPIView.as_view(), name='create-comment'),
+    path('products/<int:product_id>/comments/', CommentListAPIView.as_view(), name='comment-list'),
     path('comments/<int:comment_id>/', CommentAPIView.as_view(), name='comment-detail'),
 
     # Rating
     path('ratings/create/', CreateRatingAPIView.as_view(), name='create-rating'),
-    path('ratings/<int:rating_id>/', RatingAPIView.as_view(), name='rating-detail'),
+    path('ratings/', RatingListAPIView.as_view(), name='rating-list'),  
+    path('ratings/<int:rating_id>/', RatingAPIView.as_view(), name='rating-detail'), 
 ]
+
 
     
     #path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),

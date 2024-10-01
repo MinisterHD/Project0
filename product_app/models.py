@@ -3,17 +3,18 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
+
 class Category(models.Model):
-    name = models.CharField(max_length=255, unique=True)
-    slugname = models.SlugField(max_length=255, unique=True)
+    name = models.CharField(max_length=255, unique=True,null=False,blank=False)
+    slugname = models.SlugField(max_length=255, unique=True,null=False,blank=False)
 
     def __str__(self):
         return self.name
 
 class Subcategory(models.Model):
-    name = models.CharField(max_length=255, unique=True)
-    slugname = models.SlugField(max_length=255, unique=True)
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    name = models.CharField(max_length=255, unique=True,null=False,blank=False)
+    slugname = models.SlugField(max_length=255, unique=True,null=False,blank=False)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE,null=False,blank=False)
 
     def __str__(self):
         return self.name
@@ -22,7 +23,7 @@ class Rating(models.Model):
     product = models.ForeignKey('Product', on_delete=models.CASCADE, related_name='ratings')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     rating = models.IntegerField(choices=[(1, '1 Star'), (2, '2 Stars'),
-                                          (3, '3 Stars'), (4, '4 Stars'), (5, '5 Stars')])
+                                          (3, '3 Stars'), (4, '4 Stars'), (5, '5 Stars')],null=False,blank=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -31,8 +32,8 @@ class Rating(models.Model):
 class Product(models.Model):
     name = models.CharField(max_length=255,unique=True)
     slugname=models.SlugField(max_length=255,unique=True,default='default-slug')
-    brand=models.CharField(max_length=50,default='No Brand')
-    description = models.TextField()
+    brand=models.CharField(max_length=50,default='No Brand',null=False,blank=False)
+    description = models.TextField(max_length=2000)
     price = models.IntegerField(null=False, blank=False)
     discount_percentage = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)],default=0)
     price_after_discount = models.IntegerField(null=True,blank=True)
@@ -54,7 +55,7 @@ class Product(models.Model):
 class Comment(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='comments',null=False,blank=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    text = models.TextField(max_length=200)
+    text = models.TextField(max_length=200,null=False,blank=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

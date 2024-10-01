@@ -32,13 +32,17 @@ class CommentSerializer(serializers.ModelSerializer):
 class RatingCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rating
-        fields = ['id', 'user', 'product', 'rating', 'created_at']
+        fields = '__all__' 
         read_only_fields = ['user', 'created_at']
 
 class RatingUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rating
-        fields = ['id', 'user', 'product', 'rating', 'created_at']
+        fields = '__all__' 
         read_only_fields = ['user', 'created_at','product']
 
+class RatingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Rating
+        fields = '__all__'  
 
