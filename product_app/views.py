@@ -153,7 +153,7 @@ class SubcategoryAPIView(RetrieveUpdateDestroyAPIView):
 class CreateProductAPIView(CreateAPIView):
   queryset = Product.objects.all()
   serializer_class = ProductSerializer
-  permission_classes = [IsAuthenticated]  # Uncomment if needed
+  permission_classes = [IsAuthenticated] 
   authentication_classes = [JWTAuthentication]
   parser_classes = [JSONParser]
 

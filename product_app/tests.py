@@ -2,10 +2,10 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth.models import User
-from .models import Subcategory, Category
-from .models import Product, Category, Subcategory,Comment,Rating
+from user_app.models import User
+from .models import *
 from .serializers import *
+
 
 class CategoryTests(APITestCase):
 

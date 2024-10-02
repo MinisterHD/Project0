@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from user_app.models import User
 from django.db.models import Q
 from django.contrib.auth.models import Permission, Group
 from product_app.models import Product

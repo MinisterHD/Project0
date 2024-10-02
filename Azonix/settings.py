@@ -58,6 +58,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     
+    
 ]
 
 ROOT_URLCONF = 'Azonix.urls'
@@ -145,3 +146,8 @@ REST_FRAMEWORK = {
         ,
     ],
 }
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    # Add other backends if necessary
+]
+AUTH_USER_MODEL = 'user_app.User'

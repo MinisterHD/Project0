@@ -1,20 +1,17 @@
 from .models import *
 from .serializers import *
 from django.contrib.auth.hashers import make_password
-from django.contrib.auth.models import User
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 from rest_framework.generics import CreateAPIView,GenericAPIView
 from rest_framework import generics,status
-from rest_framework.permissions import IsAuthenticated,IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.status import HTTP_204_NO_CONTENT,HTTP_201_CREATED,HTTP_400_BAD_REQUEST,HTTP_500_INTERNAL_SERVER_ERROR
 from rest_framework.parsers import MultiPartParser, FormParser,JSONParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import ValidationError
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework.authtoken.models import Token
+import logging
 
 class SignUpView(CreateAPIView):
     serializer_class = UserSignUpSerializer
@@ -44,10 +41,14 @@ class LoginView(GenericAPIView):
         try:
             serializer.is_valid(raise_exception=True)
             return Response(serializer.validated_data, status=status.HTTP_200_OK)
+
         except ValidationError as e:
+            # Catch validation errors like invalid username/password
             return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+
         except Exception as e:
-            return Response({'errors': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logging.error(f'Error during login: {str(e)}')
+            return Response({'errors': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class UserView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()

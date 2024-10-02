@@ -1,8 +1,10 @@
 from rest_framework import serializers
 from .models import *
-from django.contrib.auth.models import User
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.exceptions import AuthenticationFailed,ValidationError
+
 
 class UserLoginSerializer(serializers.ModelSerializer):
     class Meta:
@@ -23,36 +25,22 @@ class UserSignUpSerializer(serializers.ModelSerializer):
         return data
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    username_field = User.USERNAME_FIELD
 
     def validate(self, attrs):
-        username = attrs.get('username')
-        password = attrs.get('password')
+        try:
+            data = super().validate(attrs)
+            refresh = RefreshToken(data['refresh'])
+            data['refresh'] = str(refresh)
+            return data
+        except AuthenticationFailed as exc:
+            raise ValidationError({'detail': str(exc)}, code='authentication_failed')
 
-        if not username or not password:
-            raise serializers.ValidationError('Must include "username" and "password"')
-
-        user = authenticate(request=self.context.get('request'), username=username, password=password)
-
-        if not user:
-            raise serializers.ValidationError('Invalid credentials')
-
-        refresh = self.get_token(user)
-
-        data = {
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'user': {
-                'username': user.username,
-                'email': user.email,
-            }
-        }
-        return data
-
+  
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model=User
         fields = '__all__' 
+        read_only_fields=['user_permissions','groups']
 
 
   

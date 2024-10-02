@@ -1,10 +1,10 @@
 from django.urls import reverse
-from rest_framework.test import APITestCase
+from rest_framework.test import APITestCase,APIClient
 from rest_framework import status
 from django.test import TestCase
-from django.contrib.auth.models import User
+from .models import User
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.test import APIClient
+
 
 class SignUpViewTests(APITestCase):
     def test_signup_success(self):
@@ -64,7 +64,6 @@ class UserViewTests(APITestCase):
     def test_retrieve_user(self):
         url = reverse('user-detail', kwargs={'pk': self.user.pk})
         response = self.client.get(url)
-        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['username'], self.user.username)
 
@@ -98,12 +97,12 @@ class UserListViewTest(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.admin_user = User.objects.create_superuser(
-            username='admin', password='admin123', email='admin@example.com'
+            username='admin', password='admin123'
         )
         self.regular_user = User.objects.create_user(
-            username='user', password='user123', email='user@example.com'
+            username='user', password='user123'
         )
-        self.url = reverse('user-list')  # Make sure this matches your URL name
+        self.url = reverse('user-list')  
 
     def test_user_list_as_admin(self):
         self.client.login(username='admin', password='admin123')
