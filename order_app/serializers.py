@@ -4,10 +4,7 @@ from product_app.serializers import ProductSerializer
 from product_app.models import Product
 
 class OrderSerializer(serializers.ModelSerializer):
-    # Use PrimaryKeyRelatedField for writable operations (to accept product IDs)
     products = serializers.PrimaryKeyRelatedField(many=True, queryset=Product.objects.all(), write_only=True)
-    
-    # Use the ProductSerializer for read operations (to display product details)
     product_details = ProductSerializer(many=True, read_only=True, source='products')
 
     class Meta:
@@ -15,15 +12,15 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = ['user', 'delivery_address', 'delivery_status', 'total_price', 'order_date', 'delivery_date', 'products', 'product_details']
 
     def create(self, validated_data):
-        products_data = validated_data.pop('products')  # Get product IDs
-        order = Order.objects.create(**validated_data)  # Create the order
-        order.products.set(products_data)  # Associate existing products
+        products_data = validated_data.pop('products') 
+        order = Order.objects.create(**validated_data) 
+        order.products.set(products_data)
         return order
 
     def update(self, instance, validated_data):
         products_data = validated_data.pop('products', None)
         
-        # Update other fields
+
         instance.user = validated_data.get('user', instance.user)
         instance.delivery_address = validated_data.get('delivery_address', instance.delivery_address)
         instance.delivery_status = validated_data.get('delivery_status', instance.delivery_status)
@@ -32,7 +29,6 @@ class OrderSerializer(serializers.ModelSerializer):
         instance.delivery_date = validated_data.get('delivery_date', instance.delivery_date)
         instance.save()
 
-        # If products_data exists, update the products related to the order
         if products_data:
             instance.products.set(products_data)
 

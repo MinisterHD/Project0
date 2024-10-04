@@ -26,11 +26,11 @@ class CreateOrderAPIView(CreateAPIView):
     serializer_class = OrderSerializer
 
 class OrderAPIView(RetrieveUpdateDestroyAPIView):
-    authentication_classes = [JWTAuthentication]  # JWT Authentication
-    permission_classes = [permissions.IsAuthenticated]  # Only authenticated users can retrieve, update, or delete
+    authentication_classes = [JWTAuthentication]  
+    permission_classes = [permissions.IsAuthenticated]  
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    parser_classes = [JSONParser]  # Parse JSON data
+    parser_classes = [JSONParser]  # 
 
     def get_object(self):
         try:
@@ -110,7 +110,6 @@ class CartItemAPIView(RetrieveUpdateDestroyAPIView):
     serializer_class = CartItemSerializer
 
     def get_object(self, user, product_id):
-        """Retrieve the CartItem object for the user and product ID."""
         try:
             cart = Cart.objects.get(user=user)
             return CartItem.objects.get(cart=cart, product__id=product_id)
@@ -118,7 +117,6 @@ class CartItemAPIView(RetrieveUpdateDestroyAPIView):
             return None
 
     def get(self, request, product_id):
-        """Retrieve a specific cart item with detailed product info."""
         cart_item = self.get_object(request.user, product_id)
         if cart_item:
             serializer = CartItemSerializer(cart_item) 
@@ -128,7 +126,6 @@ class CartItemAPIView(RetrieveUpdateDestroyAPIView):
 
 
     def put(self, request, product_id):
-        """Update the quantity of a specific cart item."""
         cart_item = self.get_object(request.user, product_id)
         if cart_item:
             quantity = request.data.get('quantity')
@@ -142,7 +139,6 @@ class CartItemAPIView(RetrieveUpdateDestroyAPIView):
         return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
 
     def delete(self, request, product_id):
-        """Remove a specific cart item."""
         cart_item = self.get_object(request.user, product_id)
         if cart_item:
             cart_item.delete()
