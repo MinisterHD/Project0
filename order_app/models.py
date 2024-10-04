@@ -10,5 +10,13 @@ class Order(models.Model):
     order_date = models.DateTimeField(auto_now_add=True)
     delivery_date=models.DateTimeField(auto_now_add=True,null=True)
     products = models.ManyToManyField(Product)
-    #created_at=models.DateTimeField(auto_now_add=True)
+    created_at=models.DateTimeField(auto_now_add=True)
 
+class Cart(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=0)

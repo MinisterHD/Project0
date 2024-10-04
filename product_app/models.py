@@ -3,6 +3,7 @@ from user_app.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
+from django.contrib.postgres.fields import JSONField
 
 class Category(models.Model):
     name = models.CharField(max_length=255, unique=True,null=False,blank=False)
@@ -34,13 +35,13 @@ class Product(models.Model):
     slugname=models.SlugField(max_length=255,unique=True,default='default-slug')
     brand=models.CharField(max_length=50,default='No Brand',null=False,blank=False)
     description = models.TextField(max_length=2000)
-    price = models.IntegerField(null=False, blank=False)
-    discount_percentage = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)],default=0)
-    price_after_discount = models.IntegerField(null=True,blank=True)
-    stock = models.IntegerField(default=0)
+    price = models.PositiveIntegerField(null=False, blank=False)
+    discount_percentage = models.PositiveIntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)],default=0)
+    price_after_discount = models.PositiveIntegerField(null=True,blank=True)
+    stock = models.PositiveIntegerField(default=0)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     subcategory = models.ForeignKey(Subcategory, on_delete=models.CASCADE, blank=True, null=True)
-    image = models.ImageField(upload_to='products/', blank=True)
+    images = models.JSONField(null=True,blank=True, default=list)
     thumbnail = models.ImageField(upload_to='products/thumbnails/', blank=True)
     product_descriptions = models.TextField(max_length=1000, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
