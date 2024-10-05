@@ -30,7 +30,7 @@ class OrderAPIView(RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated]  
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    parser_classes = [JSONParser]  # 
+    parser_classes = [JSONParser] 
 
     def get_object(self):
         try:
@@ -77,7 +77,7 @@ class OrderListAPIView(ListAPIView):
 
 #Cart
 class AddToCartAPIView(CreateAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+    #permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         user = request.user
@@ -119,7 +119,7 @@ class CartItemAPIView(RetrieveUpdateDestroyAPIView):
     def get(self, request, product_id):
         cart_item = self.get_object(request.user, product_id)
         if cart_item:
-            cart_serializer = CartSerializer(cart_item.cart)  # Serialize the entire cart
+            cart_serializer = CartSerializer(cart_item.cart) 
             return Response(cart_serializer.data, status=status.HTTP_200_OK)
 
         return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -134,10 +134,10 @@ class CartItemAPIView(RetrieveUpdateDestroyAPIView):
             cart_item.quantity = quantity
             cart_item.save()
 
-            cart_serializer = CartSerializer(cart_item.cart)  # Serialize the entire cart with the updated item
+            cart_serializer = CartSerializer(cart_item.cart)  
             return Response({
                 "detail": "Cart item updated.",
-                "cart": cart_serializer.data  # Return the full cart
+                "cart": cart_serializer.data  
             }, status=status.HTTP_200_OK)
 
         return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -148,10 +148,10 @@ class CartItemAPIView(RetrieveUpdateDestroyAPIView):
             cart = cart_item.cart
             cart_item.delete()
 
-            cart_serializer = CartSerializer(cart)  # Serialize the cart after deletion
+            cart_serializer = CartSerializer(cart)  
             return Response({
                 "detail": "Product removed from cart.",
-                "cart": cart_serializer.data  # Return the full cart
+                "cart": cart_serializer.data 
             }, status=status.HTTP_204_NO_CONTENT)
 
         return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)

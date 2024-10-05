@@ -70,7 +70,6 @@ class OrderAPITestCase(APITestCase):
         """Test listing orders with filtering and sorting"""
         url = reverse('order-list')
         response = self.client.get(url, {'deliveryStatus': 'pending', 'sort': 'asc'})
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)  # Should only return the 'pending' order
 
@@ -111,7 +110,7 @@ class OrderAPITestCase(APITestCase):
         url = reverse('cart-item', kwargs={'product_id': self.product_1.id})
         response = self.client.get(url)
 
-        print(response.content)
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Access the 'items' list in the cart
