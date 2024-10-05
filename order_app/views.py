@@ -8,7 +8,7 @@ from rest_framework.parsers import JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.pagination import PageNumberPagination
 from .models import *
-from .serializers import OrderSerializer,CartItemSerializer
+from .serializers import OrderSerializer,CartItemSerializer,CartSerializer
 from product_app.models import Product
 from rest_framework.permissions import IsAuthenticated
 
@@ -40,6 +40,7 @@ class OrderAPIView(RetrieveUpdateDestroyAPIView):
 
     def update(self, request, *args, **kwargs):
         try:
+            
             return super().update(request, *args, **kwargs)
         except Exception as e:
             logger.error(f"Update failed: {e}")  # Log the error
@@ -97,12 +98,11 @@ class AddToCartAPIView(CreateAPIView):
         cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product)
         cart_item.quantity += quantity
         cart_item.save()
-
+        cart_serializer = CartSerializer(cart)
         logger.info(f"User {user.id} added product {product.id} to cart. Quantity: {cart_item.quantity}.")
         return Response({
             "detail": "Product added to cart.",
-            "product_id": product.id,
-            "quantity": cart_item.quantity
+            "cart":cart_serializer.data
         }, status=status.HTTP_201_CREATED)
 
 class CartItemAPIView(RetrieveUpdateDestroyAPIView):
@@ -119,11 +119,10 @@ class CartItemAPIView(RetrieveUpdateDestroyAPIView):
     def get(self, request, product_id):
         cart_item = self.get_object(request.user, product_id)
         if cart_item:
-            serializer = CartItemSerializer(cart_item) 
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            cart_serializer = CartSerializer(cart_item.cart)  # Serialize the entire cart
+            return Response(cart_serializer.data, status=status.HTTP_200_OK)
 
         return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
-
 
     def put(self, request, product_id):
         cart_item = self.get_object(request.user, product_id)
@@ -134,14 +133,25 @@ class CartItemAPIView(RetrieveUpdateDestroyAPIView):
 
             cart_item.quantity = quantity
             cart_item.save()
-            return Response({"detail": "Cart item updated."}, status=status.HTTP_200_OK)
+
+            cart_serializer = CartSerializer(cart_item.cart)  # Serialize the entire cart with the updated item
+            return Response({
+                "detail": "Cart item updated.",
+                "cart": cart_serializer.data  # Return the full cart
+            }, status=status.HTTP_200_OK)
 
         return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
 
     def delete(self, request, product_id):
         cart_item = self.get_object(request.user, product_id)
         if cart_item:
+            cart = cart_item.cart
             cart_item.delete()
-            return Response({"detail": "Product removed from cart."}, status=status.HTTP_204_NO_CONTENT)
+
+            cart_serializer = CartSerializer(cart)  # Serialize the cart after deletion
+            return Response({
+                "detail": "Product removed from cart.",
+                "cart": cart_serializer.data  # Return the full cart
+            }, status=status.HTTP_204_NO_CONTENT)
 
         return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)

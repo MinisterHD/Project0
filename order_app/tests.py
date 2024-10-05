@@ -96,7 +96,6 @@ class OrderAPITestCase(APITestCase):
 
         Cart.objects.filter(user=self.user).delete() 
         response = self.client.post(url, data, format='json')
-        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(CartItem.objects.count(), 1)
         cart_item = CartItem.objects.first()
@@ -111,10 +110,18 @@ class OrderAPITestCase(APITestCase):
 
         url = reverse('cart-item', kwargs={'product_id': self.product_1.id})
         response = self.client.get(url)
+
         print(response.content)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['product']['id'], self.product_1.id)  # Adjust to access nested product ID
-        self.assertEqual(response.data['quantity'], 2)
+
+        # Access the 'items' list in the cart
+        items = response.data['items']
+        
+        # Assuming there's only one item in the cart (in this test case)
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['product']['id'], self.product_1.id)  # Access product ID in the nested structure
+        self.assertEqual(items[0]['quantity'], 2)  # Access quantity in the nested structure
+
 
     def test_update_cart_item(self):
         """Test updating the quantity of a specific cart item"""
@@ -125,6 +132,8 @@ class OrderAPITestCase(APITestCase):
         data = {'quantity': 5}
 
         response = self.client.put(url, data, format='json')
+        print(response.content)
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
         cart_item.refresh_from_db()

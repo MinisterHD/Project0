@@ -26,7 +26,7 @@ class SignUpView(CreateAPIView):
                 raise ValidationError({'username': 'Username already exists.'})
             serializer.validated_data['password'] = make_password(serializer.validated_data['password'])
             serializer.save()
-            return Response(data={'id': serializer.data['id'], 'username': serializer.data['username']}, status=status.HTTP_201_CREATED)
+            return Response(data={'user': serializer.data}, status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -43,7 +43,6 @@ class LoginView(GenericAPIView):
             return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
         except ValidationError as e:
-            # Catch validation errors like invalid username/password
             return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
