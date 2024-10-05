@@ -2,10 +2,9 @@ from rest_framework import serializers
 from .models import Order,CartItem,Cart
 from product_app.serializers import ProductSerializer
 from product_app.models import Product
-from rest_framework.exceptions import ValidationError
 from django.db import transaction
 
-from django.db import transaction
+
 
 class OrderSerializer(serializers.ModelSerializer):
     products = serializers.PrimaryKeyRelatedField(many=True, queryset=Product.objects.all(), write_only=True)

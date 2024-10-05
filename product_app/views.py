@@ -13,7 +13,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.generics import (CreateAPIView,RetrieveUpdateDestroyAPIView,
                                         ListAPIView,CreateAPIView)
 from rest_framework.permissions import IsAuthenticated,IsAuthenticatedOrReadOnly
-from rest_framework.parsers import JSONParser,MultiPartParser,FormParser
+from rest_framework.parsers import JSONParser,FormParser,MultiPartParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import ValidationError,NotFound
 
@@ -151,23 +151,22 @@ class SubcategoryAPIView(RetrieveUpdateDestroyAPIView):
 
 #Products
 class CreateProductAPIView(CreateAPIView):
-  queryset = Product.objects.all()
-  serializer_class = ProductSerializer
-  permission_classes = [IsAuthenticated] 
-  authentication_classes = [JWTAuthentication]
-  parser_classes = [JSONParser]
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+    parser_classes = [MultiPartParser, FormParser]  
 
-  def create(self, request, *args, **kwargs):
-      serializer = self.get_serializer(data=request.data)
-      try:
-          serializer.is_valid(raise_exception=True)
-          serializer.save()
-          return Response(serializer.data, status=status.HTTP_201_CREATED)
-      except ValidationError as e:
-          return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
-      except Exception as e:
-          return Response({'error': 'An internal server error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': 'An internal server error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 class ProductListAPIView(ListAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
@@ -179,7 +178,6 @@ class ProductListAPIView(ListAPIView):
         queryset = super().get_queryset()
         params = self.request.query_params
 
-        # Validate category and subcategory IDs using OR logic for flexibility
         category_id = params.get('category')
         subcategory_id = params.get('subcategory')
         if category_id or subcategory_id:
@@ -191,11 +189,9 @@ class ProductListAPIView(ListAPIView):
             except (Category.DoesNotExist, Subcategory.DoesNotExist):
                 raise ValidationError("Invalid category or subcategory ID(s) provided.")
 
-        # Filter by category and subcategory using OR logic for flexibility
         if category_id or subcategory_id:
             queryset = queryset.filter(Q(category_id=category_id) | Q(subcategory_id=subcategory_id))
 
-        # Filter by price range
         min_price = params.get('minPrice')
         max_price = params.get('maxPrice')
         if min_price:
@@ -204,17 +200,16 @@ class ProductListAPIView(ListAPIView):
             queryset = queryset.filter(price__lte=float(max_price)) 
 
 
-        # Sort by specified field, providing a default sort field if not provided
         sort_field = params.get('sort', 'category')
         if sort_field:
             queryset = queryset.order_by(sort_field)
 
-        # Sort by price based on the 'sort_order' parameter
-        sort_order = params.get('sort_order', 'asc')  # Default to ascending order
+
+        sort_order = params.get('sort_order', 'asc')  
         if sort_order == 'desc':
-            queryset = queryset.order_by('-price')  # Descending order
+            queryset = queryset.order_by('-price')  
         else:
-            queryset = queryset.order_by('price')  # Ascending order
+            queryset = queryset.order_by('price')  
 
         return queryset
 
@@ -311,11 +306,8 @@ class CommentAPIView(RetrieveUpdateDestroyAPIView):
             return Response({'error': 'Comment not found.'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': 'An error occurred while deleting the comment.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    #PUT meothod updates
-    #GET method retrieves
-    #DELETE method deletes
-
-#Rating
+        
+#Rating 
 class CreateRatingAPIView(generics.CreateAPIView):
     queryset = Rating.objects.all()
     serializer_class = RatingCreateSerializer

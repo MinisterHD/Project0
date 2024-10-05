@@ -3,7 +3,6 @@ from user_app.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
-from django.contrib.postgres.fields import JSONField
 
 class Category(models.Model):
     name = models.CharField(max_length=255, unique=True,null=False,blank=False)

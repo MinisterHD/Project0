@@ -156,7 +156,8 @@ class ProductTests(APITestCase):
             'subcategory': self.subcategory.id
         
         }
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format='multipart')
+        print(response.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Product.objects.count(), 2)
         self.assertEqual(Product.objects.get(name='Samsung Galaxy').description, 'Latest Samsung model')
@@ -178,7 +179,8 @@ class ProductTests(APITestCase):
             'category': self.category.id,
             'subcategory': self.subcategory.id
         }
-        response = self.client.put(url, data, HTTP_AUTHORIZATION=f'Bearer {self.token}',format='json')
+        response = self.client.put(url, data, HTTP_AUTHORIZATION=f'Bearer {self.token}',format='multipart')
+        print(response.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.product.refresh_from_db()
         self.assertEqual(self.product.name, 'iPhone Updated')
