@@ -16,7 +16,7 @@ class OrderAPITestCase(APITestCase):
 
         self.category_1=Category.objects.create(name='1',slugname='yek')
         self.product_1 = Product.objects.create(name='yaser', slugname='yaseeer', category=self.category_1,stock=50, price=10000,description='ashkjgdbakjshdb')
-        # Creating 3 orders
+
         self.order_1 = Order.objects.create(user=self.user, delivery_status='pending', delivery_date='2024-10-10', total_price=10000)
         self.order_2 = Order.objects.create(user=self.user, delivery_status='delivered', delivery_date='2024-10-01', total_price=10000)
         self.order_3 = Order.objects.create(user=self.user, delivery_status='delivered', delivery_date='2024-10-01', total_price=10000)
@@ -26,19 +26,18 @@ class OrderAPITestCase(APITestCase):
         """Test creating a new order"""
         url = reverse('order-create')  
         data = {
-            'user': self.user.id,
-            'delivery_status': 'pending',
-            'delivery_date': '2024-11-01',
-            'total_price': 10000,
-            'delivery_address': '123 Main St',
-        "products": [
-        self.product_1.id
+    'user': self.user.id,
+    'delivery_status': 'pending',
+    'delivery_date': '2024-11-01',
+    'delivery_address': '123 Main St',
+    "products": [
+        self.product_1.id  
     ]
-        }
+}
 
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Order.objects.count(), 4) 
+        self.assertEqual(Order.objects.count(), 4)
 
     def test_retrieve_order(self):
         """Test retrieving a specific order"""
@@ -64,33 +63,29 @@ class OrderAPITestCase(APITestCase):
         response = self.client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Order.objects.count(), 2)  # Only two orders should remain after deletion
+        self.assertEqual(Order.objects.count(), 2) 
 
     def test_list_orders(self):
         """Test listing orders with filtering and sorting"""
         url = reverse('order-list')
         response = self.client.get(url, {'deliveryStatus': 'pending', 'sort': 'asc'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['results']), 1)  # Should only return the 'pending' order
-
+        self.assertEqual(len(response.data['results']), 1)  
     def test_pagination(self):
         """Test pagination for order listing"""
         url = reverse('order-list')
         response = self.client.get(url, {'page': 1, 'page_size': 1})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['results']), 1)  # Since page_size=1, expect 1 result per page
-
-
-
+        self.assertEqual(len(response.data['results']), 1)  
 
 
     def test_add_to_cart(self):
         """Test adding a product to the cart"""
-        url = reverse('add-to-cart')  # Ensure this matches your URL configuration
+        url = reverse('add-to-cart')  
         data = {
             'product_id': self.product_1.id,
-            'quantity': 3  # Quantity to add
+            'quantity': 3  
         }
 
         Cart.objects.filter(user=self.user).delete() 
@@ -113,13 +108,13 @@ class OrderAPITestCase(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # Access the 'items' list in the cart
+ 
         items = response.data['items']
         
-        # Assuming there's only one item in the cart (in this test case)
+
         self.assertEqual(len(items), 1)
-        self.assertEqual(items[0]['product']['id'], self.product_1.id)  # Access product ID in the nested structure
-        self.assertEqual(items[0]['quantity'], 2)  # Access quantity in the nested structure
+        self.assertEqual(items[0]['product']['id'], self.product_1.id)  
+        self.assertEqual(items[0]['quantity'], 2)  
 
 
     def test_update_cart_item(self):
@@ -147,7 +142,7 @@ class OrderAPITestCase(APITestCase):
         response = self.client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(CartItem.objects.count(), 0)  # Cart item should be deleted
+        self.assertEqual(CartItem.objects.count(), 0)  
 
     def test_cart_item_not_found(self):
         """Test retrieving a non-existent cart item"""

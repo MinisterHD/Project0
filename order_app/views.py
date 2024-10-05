@@ -11,7 +11,7 @@ from .models import *
 from .serializers import OrderSerializer,CartItemSerializer,CartSerializer
 from product_app.models import Product
 from rest_framework.permissions import IsAuthenticated
-
+from rest_framework.exceptions import ValidationError
 logger = logging.getLogger(__name__)
 
 #Orders
@@ -24,6 +24,14 @@ class CreateOrderAPIView(CreateAPIView):
     permission_classes = [permissions.IsAuthenticated] 
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
+
+    def create(self, request, *args, **kwargs):
+        try:
+            return super().create(request, *args, **kwargs)
+        except ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class OrderAPIView(RetrieveUpdateDestroyAPIView):
     authentication_classes = [JWTAuthentication]  
