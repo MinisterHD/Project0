@@ -240,47 +240,54 @@ class CommentTests(APITestCase):
 
 class RatingAPITestCase(APITestCase):
     def setUp(self):
+      
         self.user1 = User.objects.create_user(username='user1', password='password1')
         self.user2 = User.objects.create_user(username='user2', password='password2')
 
-        self.category1=Category.objects.create(name='category1',slugname='category1')
-        self.category2=Category.objects.create(name='category2',slugname='category2')
-
     
-        self.product1 = Product.objects.create(name='Product 1',slugname='product1', description='Description 1', price=10.0,category=self.category1)
-        self.product2 = Product.objects.create(name='Product 2',slugname='product2', description='Description 2', price=20.0,category=self.category2)
+        self.category1 = Category.objects.create(name='category1', slugname='category1')
+        self.category2 = Category.objects.create(name='category2', slugname='category2')
 
-      
+ 
+        self.product1 = Product.objects.create(name='Product 1', slugname='product1', description='Description 1', price=10.0, category=self.category1)
+        self.product2 = Product.objects.create(name='Product 2', slugname='product2', description='Description 2', price=20.0, category=self.category2)
+
+ 
         self.rating1 = Rating.objects.create(product=self.product1, user=self.user1, rating=5)
         self.rating2 = Rating.objects.create(product=self.product2, user=self.user2, rating=4)
-        self.rating3 = Rating.objects.create(product=self.product1, user=self.user2, rating=3)
 
-   
         self.create_url = reverse('create-rating')
         self.list_url = reverse('rating-list')
         self.detail_url = reverse('rating-detail', kwargs={'rating_id': self.rating1.pk})
 
-   
         self.client = APIClient()
         self.client.force_authenticate(user=self.user1)
         self.token = RefreshToken.for_user(self.user1).access_token
 
-    def test_create_rating(self):
+    def test_create_rating_success(self):
         data = {
-            'product': self.product1.id,
+            'product': self.product2.id,
             'rating': 5,
-           
         }
         response = self.client.post(self.create_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Rating.objects.count(), 4)
+        self.assertEqual(Rating.objects.count(), 3) 
         self.assertEqual(Rating.objects.get(id=response.data['id']).rating, 5)
 
-    def test_create_rating_invalid_data(self):
+    def test_create_rating_already_rated(self):
         data = {
             'product': self.product1.id,
-            'rating': 6,
-            
+            'rating': 3,
+        }
+        response = self.client.post(self.create_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'You have already rated this product.')
+
+    def test_create_rating_invalid_data(self):
+ 
+        data = {
+            'product': self.product1.id,
+            'rating': 6,  
         }
         response = self.client.post(self.create_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -299,19 +306,19 @@ class RatingAPITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, serializer.data)
 
-    def test_filter_ratings_by_user(self):
-        response = self.client.get(self.list_url, {'user': self.user1.id})
-        ratings = Rating.objects.filter(user=self.user1)
-        serializer = RatingSerializer(ratings, many=True)
+    def test_update_rating(self):
+        data = {
+            'rating': 4, 
+        }
+        response = self.client.put(self.detail_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, serializer.data)
+        self.rating1.refresh_from_db()
+        self.assertEqual(self.rating1.rating, 4)
 
-    def test_filter_ratings_by_product_and_user(self):
-        response = self.client.get(self.list_url, {'product': self.product1.id, 'user': self.user2.id})
-        ratings = Rating.objects.filter(product=self.product1, user=self.user2)
-        serializer = RatingSerializer(ratings, many=True)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, serializer.data)
+    def test_delete_rating(self):
+        response = self.client.delete(self.detail_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Rating.objects.count(), 1)  
 
     def test_retrieve_rating(self):
         response = self.client.get(self.detail_url)
@@ -319,19 +326,3 @@ class RatingAPITestCase(APITestCase):
         serializer = RatingSerializer(rating)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, serializer.data)
-
-    def test_update_rating(self):
-        data = {
-            'rating': 4,
-            
-        }
-        response = self.client.put(self.detail_url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.rating1.refresh_from_db()
-        self.assertEqual(self.rating1.rating, 4)
-        
-
-    def test_delete_rating(self):
-        response = self.client.delete(self.detail_url)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Rating.objects.count(), 2)

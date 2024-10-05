@@ -326,6 +326,10 @@ class CreateRatingAPIView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
+            product_id = serializer.validated_data['product'].id 
+            if Rating.objects.filter(user=request.user, product_id=product_id).exists():
+                return Response({"error": "You have already rated this product."}, status=status.HTTP_400_BAD_REQUEST)
+
             self.perform_create(serializer)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as e:
