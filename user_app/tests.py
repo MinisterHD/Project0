@@ -119,3 +119,25 @@ class UserListViewTest(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+class TokenRefreshTestCase(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='testpass')
+        refresh = RefreshToken.for_user(self.user)
+        self.refresh_token = str(refresh)
+
+    def test_refresh_token(self):
+        url = reverse('token-refresh')  
+        data = {'refresh': self.refresh_token}
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', response.data)
+
+    def test_refresh_token_invalid(self):
+        url = reverse('token-refresh')
+        data = {'refresh': 'invalid-token'}
+        
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

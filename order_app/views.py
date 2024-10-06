@@ -8,15 +8,16 @@ from rest_framework.parsers import JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.pagination import PageNumberPagination
 from .models import *
-from .serializers import OrderSerializer,CartItemSerializer,CartSerializer
+from .serializers import OrderSerializer, CartItemSerializer, CartSerializer
 from product_app.models import Product
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
+
 logger = logging.getLogger(__name__)
 
-#Orders
+# Orders
 class OrderPagination(PageNumberPagination):
-    page_size = 1 
+    page_size = 1
     page_size_query_param = 'page_size'
     max_page_size = 10
 
@@ -26,22 +27,19 @@ class CreateOrderAPIView(CreateAPIView):
     serializer_class = OrderSerializer
 
     def create(self, request, *args, **kwargs):
-
+        # Call the super to handle creating the order
         response = super().create(request, *args, **kwargs)
         order = response.data
-        order_items = order.get('product_details', [])
+        order_items = order.get('order_items', [])  # Fetch the order items instead of product_details
         
         for item in order_items:
             try:
-                product = Product.objects.get(id=item['id'])
-                cart_item = CartItem.objects.get(cart__user=request.user, product=product)
-                product.sales_count += cart_item.quantity
+                product = Product.objects.get(id=item['product'])
+                product.sales_count += item['quantity']  # Update sales count based on quantity
                 product.save()
                 
             except Product.DoesNotExist:
-                logger.error(f"Product with ID {item['id']} does not exist.")
-            except CartItem.DoesNotExist:
-                logger.error(f"CartItem does not exist for user {request.user.id} and product {item['id']}.")
+                logger.error(f"Product with ID {item['product']} does not exist.")
             except Exception as e:
                 logger.error(f"Error updating sales count: {str(e)}")
 
@@ -62,7 +60,6 @@ class OrderAPIView(RetrieveUpdateDestroyAPIView):
 
     def update(self, request, *args, **kwargs):
         try:
-            
             return super().update(request, *args, **kwargs)
         except Exception as e:
             logger.error(f"Update failed: {e}")  # Log the error
@@ -92,10 +89,11 @@ class OrderListAPIView(ListAPIView):
             queryset = queryset.filter(delivery_status=params['deliveryStatus'])
 
         if 'sort' in params:
-            order_by = 'delivery_date' if params['sort'] == 'asc' else '-deliveryDate'
+            order_by = 'delivery_date' if params['sort'] == 'asc' else '-delivery_date'  # Correct the field name for ordering
             queryset = queryset.order_by(order_by)
 
         return queryset
+
 
 #Cart
 class AddToCartAPIView(CreateAPIView):
