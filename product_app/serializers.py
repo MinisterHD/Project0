@@ -67,6 +67,11 @@ class ProductSerializer(serializers.ModelSerializer):
     def save_image(self, image):
         return default_storage.save(f'products/images/{image.name}', image) 
 
+class ProductDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = '__all__' 
+
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment

@@ -11,33 +11,30 @@ from .models import *
 from .serializers import OrderSerializer, CartItemSerializer, CartSerializer
 from product_app.models import Product
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import ValidationError
+from rest_framework import serializers
 
 logger = logging.getLogger(__name__)
 
 # Orders
-class OrderPagination(PageNumberPagination):
-    page_size = 1
-    page_size_query_param = 'page_size'
-    max_page_size = 10
 
 class CreateOrderAPIView(CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
 
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
     def create(self, request, *args, **kwargs):
-        # Call the super to handle creating the order
         response = super().create(request, *args, **kwargs)
         order = response.data
-        order_items = order.get('order_items', [])  # Fetch the order items instead of product_details
+        order_items = order.get('order_items', [])
         
         for item in order_items:
             try:
                 product = Product.objects.get(id=item['product'])
-                product.sales_count += item['quantity']  # Update sales count based on quantity
+                product.sales_count += item['quantity']
                 product.save()
-                
             except Product.DoesNotExist:
                 logger.error(f"Product with ID {item['product']} does not exist.")
             except Exception as e:
@@ -46,11 +43,11 @@ class CreateOrderAPIView(CreateAPIView):
         return response
 
 class OrderAPIView(RetrieveUpdateDestroyAPIView):
-    authentication_classes = [JWTAuthentication]  
-    permission_classes = [permissions.IsAuthenticated]  
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
-    parser_classes = [JSONParser] 
+    parser_classes = [JSONParser]
 
     def get_object(self):
         try:
@@ -60,16 +57,28 @@ class OrderAPIView(RetrieveUpdateDestroyAPIView):
 
     def update(self, request, *args, **kwargs):
         try:
-            return super().update(request, *args, **kwargs)
+            partial = kwargs.pop('partial', False)
+            instance = self.get_object()
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+
+            if getattr(instance, '_prefetched_objects_cache', None):
+                instance._prefetched_objects_cache = {}
+
+            return Response(serializer.data)
+        except serializers.ValidationError as e:
+            logger.error(f"Validation error: {e.detail}")
+            return Response({"detail": e.detail}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            logger.error(f"Update failed: {e}")  # Log the error
-            return Response({"detail": "Unable to update order"}, status=status.HTTP_400_BAD_REQUEST)
+            logger.error(f"Update failed: {str(e)}")
+            return Response({"detail": f"Unable to update order: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, *args, **kwargs):
         try:
             return super().destroy(request, *args, **kwargs)
         except Exception as e:
-            logger.error(f"Delete failed: {e}")  # Log the error
+            logger.error(f"Delete failed: {e}")
             return Response({"detail": "Unable to delete order"}, status=status.HTTP_400_BAD_REQUEST)
 
 class OrderListAPIView(ListAPIView):
@@ -79,7 +88,9 @@ class OrderListAPIView(ListAPIView):
     serializer_class = OrderSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['delivery_status', 'user', 'order_date'] 
-    pagination_class = OrderPagination  
+    ordering_fields = ['delivery_date', 'order_date']
+    ordering = ['-order_date']
+
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -88,16 +99,18 @@ class OrderListAPIView(ListAPIView):
         if 'deliveryStatus' in params:
             queryset = queryset.filter(delivery_status=params['deliveryStatus'])
 
+        if self.request.query_params.get('sort') == 'asc':
+            return queryset.order_by('delivery_date')
+        
         if 'sort' in params:
-            order_by = 'delivery_date' if params['sort'] == 'asc' else '-delivery_date'  # Correct the field name for ordering
+            order_by = 'delivery_date' if params['sort'] == 'asc' else '-delivery_date' 
             queryset = queryset.order_by(order_by)
 
         return queryset
 
-
 #Cart
 class AddToCartAPIView(CreateAPIView):
-    #permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         user = request.user
