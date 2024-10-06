@@ -157,7 +157,6 @@ class ProductTests(APITestCase):
         
         }
         response = self.client.post(url, data, format='multipart')
-        print(response.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Product.objects.count(), 2)
         self.assertEqual(Product.objects.get(name='Samsung Galaxy').description, 'Latest Samsung model')
@@ -241,6 +240,7 @@ class CommentTests(APITestCase):
 
 
 class RatingAPITestCase(APITestCase):
+
     def setUp(self):
       
         self.user1 = User.objects.create_user(username='user1', password='password1')
@@ -328,3 +328,61 @@ class RatingAPITestCase(APITestCase):
         serializer = RatingSerializer(rating)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, serializer.data)
+
+
+class TopSellerAPITestCase(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='testpass')
+        self.category = Category.objects.create(name='Electronics', slugname='electronics')
+        self.product_1 = Product.objects.create(
+            name='Product 1',
+            slugname='product-1',
+            category=self.category,
+            stock=50,
+            price=10000,
+            description='Description of Product 1',
+            sales_count=15
+        )
+        
+        self.product_2 = Product.objects.create(
+            name='Product 2',
+            slugname='product-2',
+            category=self.category,
+            stock=30,
+            price=20000,
+            description='Description of Product 2',
+            sales_count=25
+        )
+
+        self.product_3 = Product.objects.create(
+            name='Product 3',
+            slugname='product-3',
+            category=self.category,
+            stock=20,
+            price=15000,
+            description='Description of Product 3',
+            sales_count=5
+        )
+
+
+
+    def test_top_seller_products(self):
+      
+        self.client.login(username='testuser', password='testpass')
+        url = reverse('top-seller')  
+        response = self.client.get(url)
+        print(response.content)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertLessEqual(len(response.data), 10)
+        products = response.data
+        sorted_products = sorted([self.product_1, self.product_2, self.product_3], key=lambda x: x.sales_count, reverse=True)
+        expected_ids = [product.id for product in sorted_products[:10]]  
+        self.assertListEqual([product['id'] for product in products], expected_ids)
+        for product in products:
+            self.assertIn('id', product)
+            self.assertIn('name', product)
+            self.assertIn('slugname', product)
+            self.assertIn('category', product)
+            self.assertIn('price', product)
+            self.assertIn('sales_count', product)
+

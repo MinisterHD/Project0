@@ -9,7 +9,7 @@ from django.db import transaction
 class OrderSerializer(serializers.ModelSerializer):
     products = serializers.PrimaryKeyRelatedField(many=True, queryset=Product.objects.all(), write_only=True)
     product_details = ProductSerializer(many=True, read_only=True, source='products')
-    total_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    total_price = serializers.IntegerField( read_only=True)
 
     class Meta:
         model = Order

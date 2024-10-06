@@ -3,7 +3,6 @@ from django.db.models import Q
 from .models import *
 from .serializers import *
 from .permissions import *
-
 from django.http import Http404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
@@ -353,6 +352,8 @@ class RatingListAPIView(ListAPIView):
         return queryset
     
 class RatingAPIView(RetrieveUpdateDestroyAPIView):
+
+
     permission_classes = [IsAuthenticatedOrReadOnly]
     authentication_classes = [JWTAuthentication]
     queryset = Rating.objects.all()
@@ -384,3 +385,8 @@ class RatingAPIView(RetrieveUpdateDestroyAPIView):
             return Response({'error': 'Rating not found.'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': 'An error occurred while deleting the rating.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+#TopSellerProducts
+class TopSellerAPIView(ListAPIView):
+    serializer_class = ProductSerializer
+    queryset = Product.objects.order_by('-sales_count')[:10]

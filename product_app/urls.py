@@ -4,7 +4,7 @@ from .views import (
     CreateSubcategoryAPIView, SubcategoryListAPIView, SubcategoryAPIView,
     ProductListAPIView, CreateProductAPIView, ProductAPIView,
     CommentListAPIView, CreateCommentAPIView, CommentAPIView,
-    CreateRatingAPIView, RatingAPIView,RatingListAPIView
+    CreateRatingAPIView, RatingAPIView,RatingListAPIView,TopSellerAPIView
 )
 
 urlpatterns = [
@@ -32,6 +32,9 @@ urlpatterns = [
     path('ratings/create/', CreateRatingAPIView.as_view(), name='create-rating'),
     path('ratings/', RatingListAPIView.as_view(), name='rating-list'),  
     path('ratings/<int:rating_id>/', RatingAPIView.as_view(), name='rating-detail'), 
+
+    #TopSellerList
+    path('products/top-seller/', TopSellerAPIView.as_view(), name='top-seller'),
 ]
 
 

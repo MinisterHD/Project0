@@ -46,6 +46,7 @@ class Product(models.Model):
     product_descriptions = models.TextField(max_length=1000, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now_add=True)
+    sales_count = models.IntegerField(default=0)
     def save(self, *args, **kwargs):
         self.price_after_discount = self.price * (1 - (self.discount_percentage / 100))
         super().save(*args, **kwargs)

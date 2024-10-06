@@ -21,17 +21,31 @@ class OrderPagination(PageNumberPagination):
     max_page_size = 10
 
 class CreateOrderAPIView(CreateAPIView):
-    permission_classes = [permissions.IsAuthenticated] 
+    permission_classes = [permissions.IsAuthenticated]
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
 
     def create(self, request, *args, **kwargs):
-        try:
-            return super().create(request, *args, **kwargs)
-        except ValidationError as e:
-            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        response = super().create(request, *args, **kwargs)
+        order = response.data
+        order_items = order.get('product_details', [])
+        
+        for item in order_items:
+            try:
+                product = Product.objects.get(id=item['id'])
+                cart_item = CartItem.objects.get(cart__user=request.user, product=product)
+                product.sales_count += cart_item.quantity
+                product.save()
+                
+            except Product.DoesNotExist:
+                logger.error(f"Product with ID {item['id']} does not exist.")
+            except CartItem.DoesNotExist:
+                logger.error(f"CartItem does not exist for user {request.user.id} and product {item['id']}.")
+            except Exception as e:
+                logger.error(f"Error updating sales count: {str(e)}")
+
+        return response
 
 class OrderAPIView(RetrieveUpdateDestroyAPIView):
     authentication_classes = [JWTAuthentication]  

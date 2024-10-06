@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from .models import *
+from django.core.files.storage import default_storage
+
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -13,10 +15,6 @@ class SubcategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Subcategory
         fields = '__all__'  
-
-from rest_framework import serializers
-from django.core.files.storage import default_storage
-from .models import Product, Category
 
 class ProductSerializer(serializers.ModelSerializer):
     images = serializers.ListField(
@@ -67,9 +65,7 @@ class ProductSerializer(serializers.ModelSerializer):
         return instance
 
     def save_image(self, image):
-        return default_storage.save(f'products/images/{image.name}', image)
-
-  
+        return default_storage.save(f'products/images/{image.name}', image) 
 
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:

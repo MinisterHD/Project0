@@ -23,7 +23,6 @@ class OrderAPITestCase(APITestCase):
 
 
     def test_create_order(self):
-        """Test creating a new order"""
         url = reverse('order-create')  
         data = {
     'user': self.user.id,
@@ -40,7 +39,6 @@ class OrderAPITestCase(APITestCase):
         self.assertEqual(Order.objects.count(), 4)
 
     def test_retrieve_order(self):
-        """Test retrieving a specific order"""
         url = reverse('order-detail', kwargs={'pk': self.order_1.id})
         response = self.client.get(url)
 
@@ -48,7 +46,6 @@ class OrderAPITestCase(APITestCase):
         self.assertEqual(response.data['delivery_status'], self.order_1.delivery_status)
 
     def test_update_order(self):
-        """Test updating an order"""
         url = reverse('order-detail', kwargs={'pk': self.order_1.id})
         data = {'delivery_status': 'shipped'}
 
@@ -58,7 +55,6 @@ class OrderAPITestCase(APITestCase):
         self.assertEqual(self.order_1.delivery_status, 'shipped')
 
     def test_delete_order(self):
-        """Test deleting an order"""
         url = reverse('order-detail', kwargs={'pk': self.order_1.id})
         response = self.client.delete(url)
 
@@ -66,13 +62,12 @@ class OrderAPITestCase(APITestCase):
         self.assertEqual(Order.objects.count(), 2) 
 
     def test_list_orders(self):
-        """Test listing orders with filtering and sorting"""
         url = reverse('order-list')
         response = self.client.get(url, {'deliveryStatus': 'pending', 'sort': 'asc'})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)  
     def test_pagination(self):
-        """Test pagination for order listing"""
+
         url = reverse('order-list')
         response = self.client.get(url, {'page': 1, 'page_size': 1})
 
@@ -81,7 +76,6 @@ class OrderAPITestCase(APITestCase):
 
 
     def test_add_to_cart(self):
-        """Test adding a product to the cart"""
         url = reverse('add-to-cart')  
         data = {
             'product_id': self.product_1.id,
@@ -98,7 +92,6 @@ class OrderAPITestCase(APITestCase):
 
 
     def test_retrieve_cart_item(self):
-        """Test retrieving a specific cart item"""
         cart = Cart.objects.create(user=self.user)
         cart_item = CartItem.objects.create(cart=cart, product=self.product_1, quantity=2)
 
@@ -118,7 +111,6 @@ class OrderAPITestCase(APITestCase):
 
 
     def test_update_cart_item(self):
-        """Test updating the quantity of a specific cart item"""
         cart = Cart.objects.create(user=self.user)
         cart_item = CartItem.objects.create(cart=cart, product=self.product_1, quantity=2)
 
@@ -134,7 +126,6 @@ class OrderAPITestCase(APITestCase):
         self.assertEqual(cart_item.quantity, 5)
 
     def test_delete_cart_item(self):
-        """Test removing a specific cart item"""
         cart = Cart.objects.create(user=self.user)
         cart_item = CartItem.objects.create(cart=cart, product=self.product_1, quantity=2)
 
@@ -145,7 +136,6 @@ class OrderAPITestCase(APITestCase):
         self.assertEqual(CartItem.objects.count(), 0)  
 
     def test_cart_item_not_found(self):
-        """Test retrieving a non-existent cart item"""
         url = reverse('cart-item', kwargs={'product_id': self.product_1.id})
         response = self.client.get(url)
 
