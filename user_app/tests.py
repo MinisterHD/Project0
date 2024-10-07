@@ -108,7 +108,9 @@ class UserListViewTest(TestCase):
         self.client.login(username='admin', password='admin123')
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), User.objects.count())
+        results = response.data.get('results', response.data) 
+        self.assertEqual(len(results), User.objects.count())
+
 
     def test_user_list_as_non_admin(self):
         self.client.login(username='user', password='user123')
