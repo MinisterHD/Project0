@@ -80,7 +80,10 @@ class OrderAPIView(RetrieveUpdateDestroyAPIView):
         except Exception as e:
             logger.error(f"Delete failed: {e}")
             return Response({"detail": "Unable to delete order"}, status=status.HTTP_400_BAD_REQUEST)
-
+    def get_queryset(self):
+        # Prefetch related order_items and their associated product to avoid extra queries
+        return super().get_queryset().prefetch_related('order_items__product')
+        
 class OrderListAPIView(ListAPIView):
     authentication_classes = [JWTAuthentication] 
     permission_classes = [permissions.IsAuthenticated]  

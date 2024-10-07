@@ -56,16 +56,11 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         order_items_data = validated_data.pop('order_items', None)
-
-        # Update Order fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
         if order_items_data is not None:
-            # Delete existing order items
             instance.order_items.all().delete()
-            
-            # Create new order items
             total_price = 0
             for item_data in order_items_data:
                 product = item_data['product']

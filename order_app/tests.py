@@ -19,8 +19,17 @@ class OrderAPITestCase(APITestCase):
         self.product_1 = Product.objects.create(name='yaser', slugname='yaseeer', category=self.category_1, stock=50, price=10000, description='ashkjgdbakjshdb')
         self.product_2 = Product.objects.create(name='product2', slugname='product2', category=self.category_1, stock=30, price=5000, description='product 2 description')
 
-        self.order_1 = Order.objects.create(user=self.user, delivery_status='pending', delivery_date='2024-10-10', total_price=10000)
+        self.order_1 = Order.objects.create(
+            user=self.user, 
+            delivery_status='pending', 
+            delivery_date='2024-10-10', 
+            total_price=10000
+        )
+        OrderItem.objects.create(order=self.order_1, product=self.product_1, quantity=2)
+        OrderItem.objects.create(order=self.order_1, product=self.product_2, quantity=1)
+
         self.order_2 = Order.objects.create(user=self.user, delivery_status='delivered', delivery_date='2024-10-01', total_price=10000)
+
 
     def test_create_order(self):
         url = reverse('order-create')
@@ -42,7 +51,7 @@ class OrderAPITestCase(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Order.objects.count(), 3)
-        self.assertEqual(OrderItem.objects.count(), 2)
+        self.assertEqual(OrderItem.objects.count(), 4)
 
         created_order = Order.objects.latest('id')
         self.assertEqual(created_order.delivery_status, 'pending')
@@ -64,10 +73,10 @@ class OrderAPITestCase(APITestCase):
     def test_retrieve_order(self):
         url = reverse('order-detail', kwargs={'pk': self.order_1.id})
         response = self.client.get(url)
-
+        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['delivery_status'], self.order_1.delivery_status)
-        self.assertEqual(len(response.data['order_items']), 0)
+        self.assertEqual(len(response.data['order_items']), 2)
 
     def test_retrieve_nonexistent_order(self):
         url = reverse('order-detail', kwargs={'pk': 9999})
@@ -126,19 +135,16 @@ class OrderAPITestCase(APITestCase):
     def test_list_orders(self):
         url = reverse('order-list')
         response = self.client.get(url)
-        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 2)  
     def test_filter_orders(self):
         url = reverse('order-list')
         response = self.client.get(url, {'delivery_status': 'pending'})
-        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1) 
     def test_sort_orders(self):
         url = reverse('order-list')
         response = self.client.get(url, {'sort': 'asc'})
-        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         first_order = response.data['results'][0]
         self.assertEqual(
@@ -175,7 +181,6 @@ class OrderAPITestCase(APITestCase):
 
         url = reverse('cart-item', kwargs={'product_id': self.product_1.id})
         response = self.client.get(url)
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         items = response.data['items']
         self.assertEqual(len(items), 1)
