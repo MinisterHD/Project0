@@ -15,38 +15,41 @@ from rest_framework.permissions import IsAuthenticated,IsAuthenticatedOrReadOnly
 from rest_framework.parsers import JSONParser,FormParser,MultiPartParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import ValidationError,NotFound
-
+from parler.utils.context import activate
+from parler.utils.context import switch_language
 
 #Category
 class CreateCategoryAPIView(CreateAPIView):
   serializer_class = CategorySerializer
-  permission_classes = [IsAuthenticated]
+  #permission_classes = [IsAuthenticated]
   authentication_classes = [JWTAuthentication]
   parser_classes = [JSONParser]
-
+  queryset = Category.objects.all()
   def create(self, request, *args, **kwargs):
-      serializer = self.get_serializer(data=request.data)
-      try:
-          serializer.is_valid(raise_exception=True)
-          serializer.save()
-          return Response({'status': 'success', 'data': serializer.data}, status=status.HTTP_201_CREATED)
-      except ValidationError as e:
-          return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
-      except Exception as e:
-          return Response({'error': 'An internal server error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        language = request.data.get('language', 'en')
+        activate(language)
+        return super().create(request, *args, **kwargs)
         
 class CategoryListAPIView(generics.ListAPIView):
-    queryset = Category.objects.all() 
+    queryset = Category.objects.all()
     serializer_class = CategorySerializer
+
     def get_queryset(self):
-        queryset = super().get_queryset()  
+        queryset = super().get_queryset()
         params = self.request.query_params
+
+        # Handle filtering by slugname if passed
         if 'slugname' in params:
             queryset = queryset.filter(slugname=params['slugname'])
-        return queryset    
+
+        # Handle language selection from query params (or default to 'en')
+        language = params.get('language', 'en')
+        queryset = queryset.active_translations(language_code=language)
+        
+        return queryset
 
 class CategoryAPIView(RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
     queryset = Category.objects.all()
@@ -54,53 +57,52 @@ class CategoryAPIView(RetrieveUpdateDestroyAPIView):
     lookup_url_kwarg = 'category_id'
 
     def get_object(self):
-        try:
-            return super().get_object()
-        except Http404:
-            raise NotFound('Category not found.')
+        language = self.request.query_params.get('language', 'en')
+        obj = super().get_object()
+
+        # Switch to the requested language
+        with switch_language(obj, language):
+            return obj
 
     def retrieve(self, request, *args, **kwargs):
+        language = request.query_params.get('language', 'en')
         try:
-            return super().retrieve(request, *args, **kwargs)
-        except Exception as e:
+            obj = self.get_object()
+
+            # Switch to requested language for retrieval
+            with switch_language(obj, language):
+                serializer = self.get_serializer(obj)
+                return Response(serializer.data)
+
+        except Http404:
+            raise NotFound('Category not found.')
+        except Exception:
             return Response({'error': 'An error occurred while retrieving the category.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def update(self, request, *args, **kwargs):
-        try:
+        language = request.data.get('language', 'en')
+        obj = self.get_object()
+
+        # Switch to the requested language for updates
+        with switch_language(obj, language):
             return super().update(request, *args, **kwargs)
-        except ValidationError as e:
-            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({'error': 'An error occurred while updating the category.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def destroy(self, request, *args, **kwargs):
-        try:
-            return super().destroy(request, *args, **kwargs)
-        except Exception as e:
-            return Response({'error': 'An error occurred while deleting the category.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    #PUT meothod updates
-    #GET method retrieves
-    #DELETE method deletes
+        return super().destroy(request, *args, **kwargs)
+
 
 #SubCategory
 class CreateSubcategoryAPIView(CreateAPIView):
   queryset = Subcategory.objects.all()
   serializer_class = SubcategorySerializer
-  permission_classes = [IsAuthenticated]
+  #permission_classes = [IsAuthenticated]
   authentication_classes = [JWTAuthentication]
   parser_classes = [JSONParser]
-
   def create(self, request, *args, **kwargs):
-      serializer = self.get_serializer(data=request.data)
-      try:
-          serializer.is_valid(raise_exception=True)
-          serializer.save()
-          return Response({'status': 'success', 'data': serializer.data}, status=status.HTTP_201_CREATED)
-      except ValidationError as e:
-          return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
-      except Exception as e:
-          return Response({'error': 'An internal server error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
-       
+        language = request.data.get('language', 'en')
+        activate(language)
+        return super().create(request, *args, **kwargs)
+  
 class SubcategoryListAPIView(generics.ListAPIView):
     queryset = Subcategory.objects.all()
     serializer_class = SubcategorySerializer
@@ -113,7 +115,7 @@ class SubcategoryListAPIView(generics.ListAPIView):
         return queryset
     
 class SubcategoryAPIView(RetrieveUpdateDestroyAPIView): 
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
     queryset = Subcategory.objects.all()
@@ -144,29 +146,26 @@ class SubcategoryAPIView(RetrieveUpdateDestroyAPIView):
             return super().destroy(request, *args, **kwargs)
         except Exception as e:
             return Response({'error': 'An error occurred while deleting the Subcategory.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    #PUT meothod updates
-    #GET method retrieves
-    #DELETE method deletes
 
+    def get(self, request, *args, **kwargs):
+        language = request.GET.get('language', 'en')  
+        activate(language)
+        subcategory = self.get_object()
+        serializer = SubcategorySerializer(subcategory)
+        return Response(serializer.data)
 #Products
 class CreateProductAPIView(CreateAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
-    parser_classes = [MultiPartParser, FormParser]  
+    parser_classes = [MultiPartParser, FormParser,JSONParser]  
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        try:
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        except ValidationError as e:
-            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({'error': 'An internal server error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+        language = request.data.get('language', 'en')
+        activate(language)
+        return super().create(request, *args, **kwargs)
+    
 class ProductListAPIView(ListAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer

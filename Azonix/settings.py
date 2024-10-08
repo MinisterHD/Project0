@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'parler',
     'user_app',
     'product_app',
     'order_app',
@@ -44,7 +45,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'rest_framework_simplejwt',
-    'parler',
+    
 ]
 
 MIDDLEWARE = [
@@ -162,3 +163,13 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=10),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     }
+PARLER_LANGUAGES = {
+    None: (
+        {'code': 'en'},
+        {'code': 'fa'},
+    ),
+    'default': {
+        'fallback': 'en',  
+        'hide_untranslated': False, 
+    }
+}

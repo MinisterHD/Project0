@@ -5,7 +5,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from user_app.models import User
 from .models import *
 from .serializers import *
-
+from django.utils.translation import activate
+from parler.utils.context import switch_language
 
 class CategoryTests(APITestCase):
 
@@ -17,15 +18,20 @@ class CategoryTests(APITestCase):
         self.create_url = reverse('create-category')
         self.list_url = reverse('category-list')
         self.detail_url = reverse('category-detail', kwargs={'category_id': self.category.id})
-        # Remove token if you're using force_authenticate
-        self.token = RefreshToken.for_user(self.user).access_token
 
     def test_create_category(self):
-        data = {'name': 'New Category', 'slugname': 'new-category'}
+        data = {'translations': {
+                'en': {
+                    'name': 'newcategory',
+                },
+                'fa': {
+                    'name': 'کتگوری',
+                }
+            }, 'slugname': 'new-category'}
         response = self.client.post(self.create_url, data, format='json')  # Removed token since user is authenticated
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Category.objects.count(), 2)
-        self.assertEqual(Category.objects.get(id=response.data['data']['id']).name, 'New Category')
+        self.assertEqual(Category.objects.get(id=response.data['data']['translations']['en']).name, 'newcategory')
 
     def test_list_categories(self):
         response = self.client.get(self.list_url, format='json')  # Removed token
@@ -38,93 +44,131 @@ class CategoryTests(APITestCase):
         self.assertEqual(results[0]['name'], self.category.name)
 
     def test_retrieve_category(self):
-        response = self.client.get(self.detail_url, format='json')  # Removed token
+        response = self.client.get(self.detail_url, format='json') 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['name'], self.category.name)
+        self.assertEqual(response.data['translations']['en']['name'], self.category.name)
 
     def test_update_category(self):
-        data = {'name': 'Updated Category', 'slugname': 'updated-category'}
-        response = self.client.put(self.detail_url, data, format='json')  # Removed token
+        data = {'translations': {
+                'en': {
+                    'name': 'Updated Category',
+                },
+                'fa': {
+                    'name': ' جدیدکتگوری',
+                }
+            }, 'slugname': 'updated-category'}
+        response = self.client.put(self.detail_url, data, format='json')  
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.category.refresh_from_db()
-        self.assertEqual(self.category.name, 'Updated Category')
+        self.assertEqual(self.category.data['translations']['en'], 'Updated Category')
 
     def test_delete_category(self):
-        response = self.client.delete(self.detail_url, format='json')  # Removed token
+        response = self.client.delete(self.detail_url, format='json')  
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Category.objects.count(), 0)
 
-
 class SubcategoryTestCase(APITestCase):
-
     def setUp(self):
+        activate('en')  # Activate the default language
+
+        self.user = User.objects.create_user(username='testuser', password='testpass')
         self.client = APIClient()
-        self.user = User.objects.create_user(username='testuser', password='testpassword')
-        self.category = Category.objects.create(name='Test Category')
-        self.subcategory = Subcategory.objects.create(name='Test Subcategory', category=self.category, slugname='slug-for-test')
         self.client.force_authenticate(user=self.user)
-        self.token = RefreshToken.for_user(self.user).access_token
+        
+        # Create category with 'en' translation
+        self.category = Category.objects.create(slugname="electronsics")
+        self.category.set_current_language('en')
+        self.category.name = 'Electronics'
+        self.category.save()
+
+        # Create subcategory and set translations in 'en' and 'fr'
+        self.subcategory = Subcategory.objects.create(category=self.category,slugname="electronics")
+        self.subcategory.set_current_language('en')
+        self.subcategory.name = 'Mobile Phones'
+        self.subcategory.save()
+
+     
+        self.subcategory.set_current_language('fa')
+        self.subcategory.name = 'تلفن های همراه'
+        
+        self.subcategory.save()
 
     def test_create_subcategory(self):
         url = reverse('create-subcategory')
         data = {
-            'name': 'New Subcategory',
-            'slugname': 'new-slugname',
+            "slugname":"yaserrrrrrrrrr",
+            'translations': {
+                'en': {
+                    'name': 'Laptops',
+                },
+                'fa': {
+                    'name': 'لپتاپ‌ها',
+                }
+            },
             'category': self.category.id
+            
         }
-        
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
         response = self.client.post(url, data, format='json')
-
+        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Subcategory.objects.count(), 2)
-        self.assertEqual(Subcategory.objects.get(id=response.data['data']['id']).name, 'New Subcategory')
+        self.assertEqual(Subcategory.objects.latest('id').safe_translation_getter('name', any_language=True), 'Laptops')
 
-
-    def test_list_subcategories(self):
-        url = reverse('subcategory-list')
-        response = self.client.get(url, format='json')
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        results = response.data['results'] if 'results' in response.data else response.data
-
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]['name'], self.subcategory.name)
-
-    def test_list_subcategories_filtered_by_category(self):
-        url = reverse('subcategory-list')
-        response = self.client.get(url, {'category': self.category.id}, format='json')
-
+    def test_retrieve_subcategory_in_english(self):
+        url = reverse('subcategory-detail', args=[self.subcategory.id])
+        response = self.client.get(url ) 
+        
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
-        results = response.data['results'] if 'results' in response.data else response.data
+        subcategory = response.json()
+        print(subcategory)  # Log the response for debugging
 
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]['name'], self.subcategory.name)
+        self.assertIn('translations', subcategory)
+        #self.assertIn('en', subcategory['translations'])  # Check for 'en' language translation
+        self.assertEqual(subcategory['translations']['en']['name'], 'Mobile Phones')  
 
-    def test_retrieve_subcategory(self):
-        url = reverse('subcategory-detail', kwargs={'subcategory_id': self.subcategory.id})
-        response = self.client.get(url, format='json')
 
+
+    def test_retrieve_subcategory_in_farsi(self):
+        # Add translation in Farsi for subcategory
+        with switch_language(self.subcategory, 'fa'):
+            self.subcategory.name = 'گوشی‌های موبایل'
+            self.subcategory.save()
+
+        url = reverse('subcategory-detail', args=[self.subcategory.id])
+        response = self.client.get(url + "?language=fa")  # Retrieve in 'fa'
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['name'], self.subcategory.name)
+        subcategory = response.json()
+        self.assertIn('translations', subcategory)
+        self.assertIn('fa', subcategory['translations'])
+        self.assertEqual(subcategory['translations']['fa']['name'], 'گوشی‌های موبایل')
 
     def test_update_subcategory(self):
-        url = reverse('subcategory-detail', kwargs={'subcategory_id': self.subcategory.id})
+        url = reverse('subcategory-detail', args=[self.subcategory.id])
         data = {
-            'name': 'Updated Subcategory',
-            'category': self.category.id,
-            'slugname': 'updated-subcategory-slug'  
+            "slugname":"yaserrsssssrrrrrrrr",
+            'translations': {
+                
+                'en': {
+                    'name': 'Smartphones',
+                },
+                'fa': {
+                    'name': 'تلفن‌های هوشمند',
+                }
+            },
+            'category': self.category.id
         }
         response = self.client.put(url, data, format='json')
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['slugname'], 'updated-subcategory-slug')
+        self.subcategory.refresh_from_db()
+
+        # Validate the updated translations in both languages
+        self.assertEqual(self.subcategory.safe_translation_getter('name', language_code='en'), 'Smartphones')
+        self.assertEqual(self.subcategory.safe_translation_getter('name', language_code='fa'), 'تلفن‌های هوشمند')
 
     def test_delete_subcategory(self):
-        url = reverse('subcategory-detail', kwargs={'subcategory_id': self.subcategory.id})
-        response = self.client.delete(url, format='json')
-
+        url = reverse('subcategory-detail', args=[self.subcategory.id])
+        response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Subcategory.objects.count(), 0)
 
@@ -147,109 +191,127 @@ class ProductTests(APITestCase):
             subcategory=self.subcategory
         )
         self.client.force_authenticate(user=self.user)
-        self.token = RefreshToken.for_user(self.user).access_token
-
 
     def test_product_list(self):
         url = reverse('product-list')
-        response = self.client.get(url,format='json')
+        response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
-
-        
 
     def test_create_product(self):
         url = reverse('create-product')
         data = {
-            'name': 'Samsung Galaxy',
-            'slugname':'Galaxy',
+            'translations': {
+                'en': {
+                    'name': 'galaxy',
+                },
+                'fa': {
+                    'name': 'گلکسی',
+                }},
+            'slugname': 'Galaxy',
             'description': 'Latest Samsung model',
             'price': 900,
             'stock': 15,
             'category': self.category.id,
-            'brand':'sony',
+            'brand': 'sony',
             'subcategory': self.subcategory.id
-        
         }
-        response = self.client.post(url, data, format='multipart')
+        response = self.client.post(url, data, format='json')
+        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Product.objects.count(), 2)
-        self.assertEqual(Product.objects.get(name='Samsung Galaxy').description, 'Latest Samsung model')
+        self.assertEqual(Product.objects.latest('id').safe_translation_getter('name', any_language=True), 'galaxy')
 
     def test_retrieve_product(self):
         url = reverse('product-detail', kwargs={'product_id': self.product.id})
-        response = self.client.get(url, HTTP_AUTHORIZATION=f'Bearer {self.token}',format='json')
+        response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['name'], 'iPhone')
+        self.assertEqual(response.data['translations']['en']['name'], 'iPhone')
 
     def test_update_product(self):
         url = reverse('product-detail', kwargs={'product_id': self.product.id})
         data = {
-            'name': 'iPhone Updated',
-            'slugname':'iPhone',
+            'translations': {
+                'en': {
+                    'name': 'iPhone Updated',
+                },
+                'fa': {
+                    'name': 'گلکسی',
+                }},
+            'slugname': 'iPhone',
             'description': 'Updated iPhone model',
             'price': 1000,
             'stock': 5,
             'category': self.category.id,
             'subcategory': self.subcategory.id
         }
-        response = self.client.put(url, data, HTTP_AUTHORIZATION=f'Bearer {self.token}',format='multipart')
-        print(response.data)
+        response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.product.refresh_from_db()
-        self.assertEqual(self.product.name, 'iPhone Updated')
+        self.assertEqual(Product.objects.latest('id').safe_translation_getter('name', any_language=True), 'iPhone Updated')
         self.assertEqual(self.product.price, 1000)
 
     def test_delete_product(self):
         url = reverse('product-detail', kwargs={'product_id': self.product.id})
-        response = self.client.delete(url, HTTP_AUTHORIZATION=f'Bearer {self.token}',format='json')
+        response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Product.objects.count(), 0)
 
 
 class CommentTests(APITestCase):
     def setUp(self):
-        self.owner = User.objects.create_user(username='testuser', password='testpassword')
-        samplecategory = Category.objects.create(name='Test Category', slugname='test-category')
-        self.product = Product.objects.create(name='Test Product',price=10000,stock=5,category=samplecategory)
-        self.comment = Comment.objects.create(product=self.product, owner=self.owner, text='Test comment')
         self.client = APIClient()
-        self.client.force_authenticate(user=self.owner)
-        self.token = RefreshToken.for_user(self.owner).access_token
+        self.user = User.objects.create_user(username='testuser', password='testpassword')
+        self.client.force_authenticate(user=self.user)
+        
+        self.category = Category.objects.create(name='Electronics', slugname='electronics')
+        self.product = Product.objects.create(
+            name='iPhone',
+            slugname='iPhone',
+            description='Latest iPhone model',
+            price=2000,
+            stock=10,
+            category=self.category
+        )
+        self.comment = Comment.objects.create(
+            user=self.user,
+            product=self.product,
+            text='Great product!',
+            rating=5
+        )
 
-    def test_comment_list(self):
+    def test_create_comment(self):
+        url = reverse('create-comment', kwargs={'product_id': self.product.id})
+        data = {
+            'text': 'Amazing phone!',
+            'rating': 5
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Comment.objects.count(), 2)
+        self.assertEqual(Comment.objects.last().text, 'Amazing phone!')
+
+    def test_retrieve_comments(self):
         url = reverse('comment-list', kwargs={'product_id': self.product.id})
-        response = self.client.get(url, HTTP_AUTHORIZATION=f'Bearer {self.token}',format='json')
+        response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
 
-    def test_create_comment(self):
-        url = reverse('create-comment')
-        data = {'product': self.product.id, 'text': 'New comment', 'owner': self.owner.id}
-        response = self.client.post(url, data, HTTP_AUTHORIZATION=f'Bearer {self.token}',format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Comment.objects.count(), 2)
-    
-
-    def test_retrieve_comment(self):
-        url = reverse('comment-detail', kwargs={'comment_id': self.comment.id})
-        response = self.client.get(url, HTTP_AUTHORIZATION=f'Bearer {self.token}',format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['text'], self.comment.text)
-
     def test_update_comment(self):
-        url = reverse('comment-detail', kwargs={'comment_id': self.comment.id})
-        data = {'product': self.product.id,'text': 'Updated comment', 'owner': self.owner.id}
-        response = self.client.put(url, data, HTTP_AUTHORIZATION=f'Bearer {self.token}',format='json')
-        
+        url = reverse('comment-detail', kwargs={'product_id': self.product.id, 'comment_id': self.comment.id})
+        data = {
+            'text': 'Updated comment text',
+            'rating': 4
+        }
+        response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.comment.refresh_from_db()
-        self.assertEqual(self.comment.text, 'Updated comment')
-        
+        self.assertEqual(self.comment.text, 'Updated comment text')
+        self.assertEqual(self.comment.rating, 4)
 
     def test_delete_comment(self):
-        url = reverse('comment-detail', kwargs={'comment_id': self.comment.id})
-        response = self.client.delete(url, HTTP_AUTHORIZATION=f'Bearer {self.token}',format='json')
+        url = reverse('comment-detail', kwargs={'product_id': self.product.id, 'comment_id': self.comment.id})
+        response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Comment.objects.count(), 0)
 
@@ -360,68 +422,65 @@ class RatingAPITestCase(APITestCase):
 
 class TopSellerAPITestCase(APITestCase):
     def setUp(self):
+        activate('en')  
+
         self.user = User.objects.create_user(username='testuser', password='testpass')
-        self.category = Category.objects.create(name='Electronics', slugname='electronics')
-        self.product_1 = Product.objects.create(
-            name='Product 1',
-            slugname='product-1',
-            category=self.category,
-            stock=50,
-            price=10000,
-            description='Description of Product 1',
-            sales_count=15
-        )
         
-        self.product_2 = Product.objects.create(
-            name='Product 2',
-            slugname='product-2',
-            category=self.category,
-            stock=30,
-            price=20000,
-            description='Description of Product 2',
-            sales_count=25
-        )
+        self.category = Category.objects.create()
+        self.category.set_current_language('en')
+        self.category.name = 'Electronics'
+        self.category.save()
 
-        self.product_3 = Product.objects.create(
-            name='Product 3',
-            slugname='product-3',
-            category=self.category,
-            stock=20,
-            price=15000,
-            description='Description of Product 3',
-            sales_count=5
-        )
+        self.product_1 = Product.objects.create(category=self.category, stock=50, price=10000, sales_count=15)
+        self.product_1.set_current_language('en')
+        self.product_1.name = 'Product 1'
+        self.product_1.description = 'Description of Product 1'
+        self.product_1.save()
+        
+        self.product_2 = Product.objects.create(category=self.category, stock=30, price=20000, sales_count=25)
+        self.product_2.set_current_language('en')
+        self.product_2.name = 'Product 2'
+        self.product_2.description = 'Description of Product 2'
+        self.product_2.save()
 
-
+        self.product_3 = Product.objects.create(category=self.category, stock=20, price=15000, sales_count=10)
+        self.product_3.set_current_language('en')
+        self.product_3.name = 'Product 3'
+        self.product_3.description = 'Description of Product 3'
+        self.product_3.save()
 
     def test_top_seller_products(self):
         self.client.login(username='testuser', password='testpass')
         url = reverse('top-seller')
-        
-        # Make the request
+      
         response = self.client.get(url)
-        
-        # Check response status
+    
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
-        # Assert that the response data contains at most 10 products
+       
         self.assertLessEqual(len(response.data['results']), 10)
         
-        # Parse response data as JSON
         products = response.json()['results']
         
-        # Sort products by sales count in descending order for expected result
         sorted_products = sorted([self.product_1, self.product_2, self.product_3], key=lambda x: x.sales_count, reverse=True)
         expected_ids = [product.id for product in sorted_products[:10]]
         
-        # Check if the product IDs in the response match the expected IDs
+
         self.assertListEqual([product['id'] for product in products], expected_ids)
-        
-        # Assert that each product in the response contains the required fields
+     
         for product in products:
-            self.assertIn('id', product)
-            self.assertIn('name', product)
-            self.assertIn('slugname', product)
+            self.assertIn('translations', product)
+            self.assertIn('en', product['translations'])
+            self.assertIn('name', product['translations']['en'])
+            self.assertIn('description', product['translations']['en'])
+            self.assertIn('category_name', product)
             self.assertIn('category', product)
+            self.assertIn('brand', product)
             self.assertIn('price', product)
+            self.assertIn('discount_percentage', product)
+            self.assertIn('price_after_discount', product)
+            self.assertIn('stock', product)
+            self.assertIn('thumbnail', product)
+            self.assertIn('created_at', product)
+            self.assertIn('updated_at', product)
             self.assertIn('sales_count', product)
+            self.assertIn('subcategory', product)

@@ -3,21 +3,27 @@ from user_app.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
+from parler.models import TranslatableModel, TranslatedFields
 
-class Category(models.Model):
-    name = models.CharField(max_length=255, unique=True,null=False,blank=False)
-    slugname = models.SlugField(max_length=255, unique=True,null=False,blank=False)
 
+
+class Category(TranslatableModel):
+    translations = TranslatedFields(
+        name=models.CharField(max_length=255, null=False, blank=False,unique=True), 
+    )
+    slugname=models.SlugField(max_length=255, unique=True)
     def __str__(self):
-        return self.name
-
-class Subcategory(models.Model):
-    name = models.CharField(max_length=255, unique=True,null=False,blank=False)
-    slugname = models.SlugField(max_length=255, unique=True,null=False,blank=False)
+        return self.safe_translation_getter('name', any_language=True)
+  
+class Subcategory(TranslatableModel):
+    translations = TranslatedFields(
+        name=models.CharField(max_length=255, null=False, blank=False,unique=True), 
+    )
+    slugname=models.SlugField(max_length=255, unique=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE,null=False,blank=False)
 
     def __str__(self):
-        return self.name
+        return self.safe_translation_getter('name', any_language=True)
 
 class Rating(models.Model):
     product = models.ForeignKey('Product', on_delete=models.CASCADE, related_name='ratings')
@@ -30,11 +36,13 @@ class Rating(models.Model):
     def __str__(self):
         return f'{self.rating} by {self.user}'
 
-class Product(models.Model):
-    name = models.CharField(max_length=255,unique=True)
-    slugname=models.SlugField(max_length=255,unique=True,default='default-slug')
+class Product(TranslatableModel):
+    translations = TranslatedFields(
+        name=models.CharField(max_length=255, null=False, blank=False,unique=True),
+        description = models.TextField(max_length=2000,null=True,blank=True),
+    )
     brand=models.CharField(max_length=50,default='No Brand',null=False,blank=False)
-    description = models.TextField(max_length=2000)
+    slugname=models.SlugField(max_length=255, unique=True,default='default-slug')
     price = models.PositiveIntegerField(null=False, blank=False)
     discount_percentage = models.PositiveIntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)],default=0)
     price_after_discount = models.PositiveIntegerField(null=True,blank=True)
@@ -43,7 +51,7 @@ class Product(models.Model):
     subcategory = models.ForeignKey(Subcategory, on_delete=models.CASCADE, blank=True, null=True)
     images = models.JSONField(null=True,blank=True, default=list)
     thumbnail = models.ImageField(upload_to='products/thumbnails/', blank=True)
-    product_descriptions = models.TextField(max_length=1000, blank=True)
+    #product_descriptions = models.TextField(max_length=1000, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now_add=True)
     sales_count = models.IntegerField(default=0)

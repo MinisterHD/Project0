@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 # Orders
 
 class CreateOrderAPIView(CreateAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+    #permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
 

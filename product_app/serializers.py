@@ -1,22 +1,34 @@
 from rest_framework import serializers
 from .models import *
 from django.core.files.storage import default_storage
+from parler_rest.serializers import TranslatableModelSerializer, TranslatedFieldsField
 
 
 
-class CategorySerializer(serializers.ModelSerializer):
+class CategorySerializer(TranslatableModelSerializer):
+    translations = TranslatedFieldsField(shared_model=Category)
+
     class Meta:
         model = Category
-        fields = ['id', 'name', 'slugname',]
+        fields = ['id', 'translations','slugname']  
 
-class SubcategorySerializer(serializers.ModelSerializer):
+
+class SubcategorySerializer(TranslatableModelSerializer):
+    translations = TranslatedFieldsField(shared_model=Subcategory)
     category_name = serializers.CharField(source='category.name', read_only=True)
     category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
     class Meta:
         model = Subcategory
-        fields = '__all__'  
+        fields = ['id', 'translations','category','category_name','slugname'] 
+    def get_translations(self, obj):
+            return {
+                lang: {
+                 'name': obj.safe_translation_getter('name', language_code=lang)
+                }
+                 for lang in obj.get_available_languages()   }
 
-class ProductSerializer(serializers.ModelSerializer):
+class ProductSerializer(TranslatableModelSerializer):
+    translations = TranslatedFieldsField(shared_model=Product)
     images = serializers.ListField(
         child=serializers.ImageField(max_length=100000, allow_empty_file=False, use_url=True),
         write_only=True,
