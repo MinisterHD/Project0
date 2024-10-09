@@ -13,6 +13,14 @@ from rest_framework.exceptions import ValidationError
 import logging
 
 #Auth
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
+from django.utils.translation import gettext_lazy as _
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
+from rest_framework.generics import CreateAPIView
+from django.contrib.auth.hashers import make_password
+
 class SignUpView(CreateAPIView):
     serializer_class = UserSignUpSerializer
     parser_classes = [JSONParser]
@@ -22,15 +30,35 @@ class SignUpView(CreateAPIView):
         try:
             serializer.is_valid(raise_exception=True)
             username = serializer.validated_data['username']
+
+
             if User.objects.filter(username=username).exists():
-                raise ValidationError({'username': 'Username already exists.'})
+                raise ValidationError({'username': _('Username already exists.')})
+
+
             serializer.validated_data['password'] = make_password(serializer.validated_data['password'])
-            serializer.save()
-            return Response(data={'user': serializer.data}, status=status.HTTP_201_CREATED)
+            user = serializer.save()
+
+   
+            refresh = RefreshToken.for_user(user)
+            access = str(refresh.access_token)
+
+   
+            response_data = {
+                'user': serializer.data,
+                'tokens': {
+                    'refresh': str(refresh),
+                    'access': access,
+                }
+            }
+
+            return Response(data=response_data, status=status.HTTP_201_CREATED)
+
         except ValidationError as e:
             return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'errors': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class LoginView(GenericAPIView):
     serializer_class = CustomTokenObtainPairSerializer

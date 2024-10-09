@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'user_app',
     'product_app',
     'order_app',
+    'chat_app',
     'django_filters',
     'rest_framework',
     'rest_framework.authtoken',
