@@ -14,7 +14,7 @@ class CategoryTests(APITestCase):
         self.user = User.objects.create_user(username='testuser', password='testpassword')
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)  # Use force_authenticate or token, not both
-        self.category = Category.objects.create(name='Test Category', slugname='test-category')
+        self.category = Category.objects.create(name='Test Category', slugname='test-caRtegory')
         self.create_url = reverse('create-category')
         self.list_url = reverse('category-list')
         self.detail_url = reverse('category-detail', kwargs={'category_id': self.category.id})
@@ -27,7 +27,7 @@ class CategoryTests(APITestCase):
                 'fa': {
                     'name': 'کتگوری',
                 }
-            }, 'slugname': 'new-category'}
+            }, 'slugname': 'nAew-category'}
         response = self.client.post(self.create_url, data, format='json')  # Removed token since user is authenticated
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Category.objects.count(), 2)
@@ -37,7 +37,7 @@ class CategoryTests(APITestCase):
         response = self.client.get(self.list_url, format='json')  # Removed token
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         
-        # Handle paginated response
+
         results = response.data['results'] if 'results' in response.data else response.data
 
         self.assertEqual(len(results), 1)
@@ -56,7 +56,7 @@ class CategoryTests(APITestCase):
                 'fa': {
                     'name': ' جدیدکتگوری',
                 }
-            }, 'slugname': 'updated-category'}
+            }, 'slugname': 'updatedaaaacategory'}
         response = self.client.put(self.detail_url, data, format='json')  
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.category.refresh_from_db()
@@ -96,7 +96,7 @@ class SubcategoryTestCase(APITestCase):
     def test_create_subcategory(self):
         url = reverse('create-subcategory')
         data = {
-            "slugname":"yaserrrrrrrrrr",
+            "slugname":"yaserrrsdfssssarrrrrrr",
             'translations': {
                 'en': {
                     'name': 'Laptops',
@@ -146,7 +146,7 @@ class SubcategoryTestCase(APITestCase):
     def test_update_subcategory(self):
         url = reverse('subcategory-detail', args=[self.subcategory.id])
         data = {
-            "slugname":"yaserrsssssrrrrrrrr",
+            "slugname":"yaserrsssssrrrrfghfrrrrr",
             'translations': {
                 
                 'en': {
@@ -171,7 +171,6 @@ class SubcategoryTestCase(APITestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Subcategory.objects.count(), 0)
-
 
 class ProductTests(APITestCase):
 
@@ -257,14 +256,13 @@ class ProductTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Product.objects.count(), 0)
 
-
 class CommentTests(APITestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = User.objects.create_user(username='testuser', password='testpassword')
         self.client.force_authenticate(user=self.user)
         
-        self.category = Category.objects.create(name='Electronics', slugname='electronics')
+        self.category = Category.objects.create(name='Electronics', slugname='electronicls')
         self.product = Product.objects.create(
             name='iPhone',
             slugname='iPhone',
@@ -274,17 +272,18 @@ class CommentTests(APITestCase):
             category=self.category
         )
         self.comment = Comment.objects.create(
-            user=self.user,
+            owner=self.user,
             product=self.product,
-            text='Great product!',
-            rating=5
+            text='Great product!'
+           
         )
 
     def test_create_comment(self):
-        url = reverse('create-comment', kwargs={'product_id': self.product.id})
+        url = reverse('create-comment')
         data = {
             'text': 'Amazing phone!',
-            'rating': 5
+            'product': self.product.id
+            
         }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -298,23 +297,22 @@ class CommentTests(APITestCase):
         self.assertEqual(len(response.data['results']), 1)
 
     def test_update_comment(self):
-        url = reverse('comment-detail', kwargs={'product_id': self.product.id, 'comment_id': self.comment.id})
+        url = reverse('comment-detail', kwargs={'comment_id': self.comment.id})
         data = {
-            'text': 'Updated comment text',
-            'rating': 4
+            'text': 'Updated comment text'
+            
         }
         response = self.client.put(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.comment.refresh_from_db()
         self.assertEqual(self.comment.text, 'Updated comment text')
-        self.assertEqual(self.comment.rating, 4)
+        
 
     def test_delete_comment(self):
-        url = reverse('comment-detail', kwargs={'product_id': self.product.id, 'comment_id': self.comment.id})
+        url = reverse('comment-detail', kwargs={ 'comment_id': self.comment.id})
         response = self.client.delete(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Comment.objects.count(), 0)
-
 
 class RatingAPITestCase(APITestCase):
 
@@ -418,7 +416,6 @@ class RatingAPITestCase(APITestCase):
         serializer = RatingSerializer(rating)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, serializer.data)
-
 
 class TopSellerAPITestCase(APITestCase):
     def setUp(self):

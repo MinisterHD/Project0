@@ -58,7 +58,7 @@ class OrderSerializer(serializers.ModelSerializer):
         order_items_data = validated_data.pop('order_items', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-
+        
         if order_items_data is not None:
             instance.order_items.all().delete()
             total_price = 0

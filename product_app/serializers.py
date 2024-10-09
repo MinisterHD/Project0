@@ -3,15 +3,12 @@ from .models import *
 from django.core.files.storage import default_storage
 from parler_rest.serializers import TranslatableModelSerializer, TranslatedFieldsField
 
-
-
 class CategorySerializer(TranslatableModelSerializer):
     translations = TranslatedFieldsField(shared_model=Category)
 
     class Meta:
         model = Category
         fields = ['id', 'translations','slugname']  
-
 
 class SubcategorySerializer(TranslatableModelSerializer):
     translations = TranslatedFieldsField(shared_model=Subcategory)
@@ -79,7 +76,8 @@ class ProductSerializer(TranslatableModelSerializer):
     def save_image(self, image):
         return default_storage.save(f'products/images/{image.name}', image) 
 
-class ProductDetailSerializer(serializers.ModelSerializer):
+class ProductDetailSerializer(TranslatableModelSerializer):
+    translations = TranslatedFieldsField(shared_model=Product)
     class Meta:
         model = Product
         fields = '__all__' 
