@@ -95,7 +95,7 @@ class CategoryAPIView(RetrieveUpdateDestroyAPIView):
 class CreateSubcategoryAPIView(CreateAPIView):
   queryset = Subcategory.objects.all()
   serializer_class = SubcategorySerializer
-  #permission_classes = [IsAuthenticated]
+  permission_classes = [IsAuthenticated]
   authentication_classes = [JWTAuthentication]
   parser_classes = [JSONParser]
   def create(self, request, *args, **kwargs):
@@ -115,7 +115,7 @@ class SubcategoryListAPIView(generics.ListAPIView):
         return queryset
     
 class SubcategoryAPIView(RetrieveUpdateDestroyAPIView): 
-    #permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
     queryset = Subcategory.objects.all()
@@ -157,9 +157,9 @@ class SubcategoryAPIView(RetrieveUpdateDestroyAPIView):
 class CreateProductAPIView(CreateAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    #permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
-    parser_classes = [MultiPartParser, FormParser,JSONParser]  
+    parser_classes = [MultiPartParser]  
 
     def create(self, request, *args, **kwargs):
         language = request.data.get('language', 'en')

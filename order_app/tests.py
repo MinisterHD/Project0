@@ -49,6 +49,7 @@ class OrderAPITestCase(APITestCase):
             ]
         }
         response = self.client.post(url, data, format='json')
+        print(response.content)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Order.objects.count(), 3)
         self.assertEqual(OrderItem.objects.count(), 4)

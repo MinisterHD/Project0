@@ -199,27 +199,29 @@ class ProductTests(APITestCase):
 
     def test_create_product(self):
         url = reverse('create-product')
+
+    # Create mock image files for testing
+   
+    # Prepare the flattened data
         data = {
-            'translations': {
-                'en': {
-                    'name': 'galaxy',
-                },
-                'fa': {
-                    'name': 'گلکسی',
-                }},
-            'slugname': 'Galaxy',
-            'description': 'Latest Samsung model',
-            'price': 900,
-            'stock': 15,
-            'category': self.category.id,
-            'brand': 'sony',
-            'subcategory': self.subcategory.id
+        'translations_en_name': 'galaxy',
+        'translations_en_description': 'Latest Samsung model',
+        'translations_fa_name': 'گلکسی',
+        'translations_fa_description': 'مدل جدید سامسونگ',
+        'slugname': 'Galaxy',
+        'price': 900,
+        'stock': 15,
+        'category': self.category.id,
+        'brand': 'sony',
         }
-        response = self.client.post(url, data, format='json')
-        print(response.content)
+    
+        response = self.client.post(url, data, format='multipart')
+
+        print(response.content)  # Useful for debugging
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Product.objects.count(), 2)
+        self.assertEqual(Product.objects.count(), 2)  # Adjust this if you expect more/less
         self.assertEqual(Product.objects.latest('id').safe_translation_getter('name', any_language=True), 'galaxy')
+
 
     def test_retrieve_product(self):
         url = reverse('product-detail', kwargs={'product_id': self.product.id})

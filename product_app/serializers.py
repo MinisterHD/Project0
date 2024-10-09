@@ -24,8 +24,13 @@ class SubcategorySerializer(TranslatableModelSerializer):
                 }
                  for lang in obj.get_available_languages()   }
 
+
 class ProductSerializer(TranslatableModelSerializer):
-    translations = TranslatedFieldsField(shared_model=Product)
+    translations_en_name = serializers.CharField(write_only=True, required=True)
+    translations_en_description = serializers.CharField(write_only=True, required=True)
+    translations_fa_name = serializers.CharField(write_only=True, required=True)
+    translations_fa_description = serializers.CharField(write_only=True, required=True)
+
     images = serializers.ListField(
         child=serializers.ImageField(max_length=100000, allow_empty_file=False, use_url=True),
         write_only=True,
@@ -41,10 +46,38 @@ class ProductSerializer(TranslatableModelSerializer):
         read_only_fields = ["id", "created_at", "updated_at", "price_after_discount"]
 
     def create(self, validated_data):
+
         images = validated_data.pop('images', None)
 
-        product = Product.objects.create(**validated_data)
+ 
+        product = Product.objects.create(
+            brand=validated_data.pop('brand'),
+            slugname=validated_data.pop('slugname'),
+            price=validated_data.pop('price'),
+            stock=validated_data.pop('stock'),
+            category=validated_data.pop('category'),
+            subcategory=validated_data.pop('subcategory', None)
+        )
 
+ 
+        translations = {
+            'en': {
+                'name': validated_data.pop('translations_en_name'),
+                'description': validated_data.pop('translations_en_description'),
+            },
+            'fa': {
+                'name': validated_data.pop('translations_fa_name'),
+                'description': validated_data.pop('translations_fa_description'),
+            },
+        }
+
+        for lang, translation in translations.items():
+            product.set_current_language(lang)
+            product.name = translation['name']
+            product.description = translation['description']
+            product.save_translations()
+
+ 
         if images:
             image_urls = []
             for image in images:
@@ -59,10 +92,29 @@ class ProductSerializer(TranslatableModelSerializer):
     def update(self, instance, validated_data):
         images = validated_data.pop('images', None)
 
-
+ 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
+    
+        translations = {
+            'en': {
+                'name': validated_data.pop('translations_en_name', instance.safe_translation_getter('name', language='en')),
+                'description': validated_data.pop('translations_en_description', instance.safe_translation_getter('description', language='en')),
+            },
+            'fa': {
+                'name': validated_data.pop('translations_fa_name', instance.safe_translation_getter('name', language='fa')),
+                'description': validated_data.pop('translations_fa_description', instance.safe_translation_getter('description', language='fa')),
+            },
+        }
+
+        for lang, translation in translations.items():
+            instance.set_current_language(lang)
+            instance.name = translation['name']
+            instance.description = translation['description']
+            instance.save_translations()
+
+      
         if images:
             image_urls = []
             for image in images:
@@ -74,7 +126,8 @@ class ProductSerializer(TranslatableModelSerializer):
         return instance
 
     def save_image(self, image):
-        return default_storage.save(f'products/images/{image.name}', image) 
+        return default_storage.save(f'products/images/{image.name}', image)
+
 
 class ProductDetailSerializer(TranslatableModelSerializer):
     translations = TranslatedFieldsField(shared_model=Product)
