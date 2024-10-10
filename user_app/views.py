@@ -72,7 +72,7 @@ class LoginView(GenericAPIView):
 
 class LogoutView(APIView):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
     parser_classes = [JSONParser]
 
     def get(self, request):
@@ -87,7 +87,7 @@ class LogoutView(APIView):
 class UserView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
     parser_classes=[JSONParser]
     def get_queryset(self):
         if self.request.user.is_superuser:

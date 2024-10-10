@@ -278,7 +278,7 @@ class CommentListAPIView(ListAPIView):
 class CommentAPIView(RetrieveUpdateDestroyAPIView):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    #permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
     parser_classes = [JSONParser]
 
     lookup_url_kwarg = 'comment_id'
@@ -316,7 +316,7 @@ class CommentAPIView(RetrieveUpdateDestroyAPIView):
 class CreateRatingAPIView(generics.CreateAPIView):
     queryset = Rating.objects.all()
     serializer_class = RatingCreateSerializer
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
 
     def create(self, request, *args, **kwargs):
@@ -360,7 +360,7 @@ class RatingListAPIView(ListAPIView):
 class RatingAPIView(RetrieveUpdateDestroyAPIView):
 
 
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    #permission_classes = [IsAuthenticatedOrReadOnly]
     authentication_classes = [JWTAuthentication]
     queryset = Rating.objects.all()
     serializer_class = RatingUpdateSerializer

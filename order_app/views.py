@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # Orders
 
 class CreateOrderAPIView(CreateAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+    #permission_classes = [permissions.IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
@@ -76,7 +76,7 @@ class CreateOrderAPIView(CreateAPIView):
 
 class OrderAPIView(RetrieveUpdateDestroyAPIView):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
+    #permission_classes = [permissions.IsAuthenticated]
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     parser_classes = [JSONParser]
@@ -118,7 +118,7 @@ class OrderAPIView(RetrieveUpdateDestroyAPIView):
         
 class OrderListAPIView(ListAPIView):
     authentication_classes = [JWTAuthentication] 
-    permission_classes = [permissions.IsAuthenticated]  
+    #permission_classes = [permissions.IsAuthenticated]  
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -143,9 +143,27 @@ class OrderListAPIView(ListAPIView):
 
         return queryset
 
+class CancelOrderAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, order_id):
+        try:
+            order = Order.objects.get(id=order_id, user=request.user)
+
+            if order.delivery_status != 'cancelled':
+                order.cancel_order()
+                return Response({"detail": "Order cancelled successfully."}, status=status.HTTP_200_OK)
+            else:
+                return Response({"detail": "Order is already cancelled."}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Order.DoesNotExist:
+            return Response({"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": f"Error cancelling order: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 #Cart
 class AddToCartAPIView(CreateAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+    #permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         user = request.user
@@ -174,7 +192,7 @@ class AddToCartAPIView(CreateAPIView):
         }, status=status.HTTP_201_CREATED)
 
 class CartItemAPIView(RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
     serializer_class = CartItemSerializer
 
     def get_object(self, user, product_id):
@@ -224,20 +242,3 @@ class CartItemAPIView(RetrieveUpdateDestroyAPIView):
 
         return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
     
-class CancelOrderAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, order_id):
-        try:
-            order = Order.objects.get(id=order_id, user=request.user)
-
-            if order.delivery_status != 'cancelled':
-                order.cancel_order()
-                return Response({"detail": "Order cancelled successfully."}, status=status.HTTP_200_OK)
-            else:
-                return Response({"detail": "Order is already cancelled."}, status=status.HTTP_400_BAD_REQUEST)
-
-        except Order.DoesNotExist:
-            return Response({"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({"detail": f"Error cancelling order: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
