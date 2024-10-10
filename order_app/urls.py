@@ -4,7 +4,8 @@ from .views import (
     OrderListAPIView,
     CreateOrderAPIView,
     CartItemAPIView,
-    AddToCartAPIView
+    AddToCartAPIView,
+    CancelOrderAPIView
 )
 
 
@@ -17,7 +18,7 @@ urlpatterns = [
 
     path('cart/add/', AddToCartAPIView.as_view(), name='add-to-cart'),
     path('cart/<int:product_id>/', CartItemAPIView.as_view(), name='cart-item'),
-
+    path('orders/cancel/<int:order_id>/', CancelOrderAPIView.as_view(), name='cancel-order'),
 ]
 
 

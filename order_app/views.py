@@ -6,13 +6,12 @@ from rest_framework.exceptions import NotFound
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.parsers import JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.pagination import PageNumberPagination
 from .models import *
 from .serializers import OrderSerializer, CartItemSerializer, CartSerializer
 from product_app.models import Product
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
-
+from rest_framework.views import APIView
 logger = logging.getLogger(__name__)
 
 # Orders
@@ -24,24 +23,56 @@ class CreateOrderAPIView(CreateAPIView):
     serializer_class = OrderSerializer
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        order = serializer.save(user=self.request.user)
+        return order
 
     def create(self, request, *args, **kwargs):
-        response = super().create(request, *args, **kwargs)
-        order = response.data
-        order_items = order.get('order_items', [])
-        
-        for item in order_items:
-            try:
-                product = Product.objects.get(id=item['product'])
-                product.sales_count += item['quantity']
-                product.save()
-            except Product.DoesNotExist:
-                logger.error(f"Product with ID {item['product']} does not exist.")
-            except Exception as e:
-                logger.error(f"Error updating sales count: {str(e)}")
+        order_items_data = request.data.get('order_items', [])
 
-        return response
+        if not order_items_data:
+            return Response({"detail": "No items in the order."}, status=status.HTTP_400_BAD_REQUEST)
+
+        total_price = 0  
+
+
+        order = Order(user=request.user, delivery_address=request.data.get('delivery_address'))
+        order_items = []  
+
+        for item_data in order_items_data:
+            try:
+                product_id = item_data['product'] 
+                quantity = item_data['quantity']  
+
+
+                if product_id is None or quantity is None:
+                    return Response({"detail": "Product ID and quantity must be provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+                product = Product.objects.get(id=product_id)
+                if product.stock < quantity:
+                    return Response({"detail": f"Not enough stock for {product.name}."}, status=status.HTTP_400_BAD_REQUEST)
+
+                total_price += product.price * quantity
+
+ 
+                order_item = OrderItem(order=order, product=product, quantity=quantity)
+                order_items.append(order_item)
+
+                product.stock -= quantity
+                product.sales_count += quantity 
+                product.save()
+
+            except Product.DoesNotExist:
+                return Response({"detail": f"Product with ID {product_id} does not exist."}, status=status.HTTP_404_NOT_FOUND)
+            except KeyError as e:
+                return Response({"detail": f"Missing field: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+        order.total_price = total_price
+        order.save()
+
+        OrderItem.objects.bulk_create(order_items)
+
+        return Response({"detail": "Order created successfully.", "order_id": order.id}, status=status.HTTP_201_CREATED)
 
 class OrderAPIView(RetrieveUpdateDestroyAPIView):
     authentication_classes = [JWTAuthentication]
@@ -192,3 +223,21 @@ class CartItemAPIView(RetrieveUpdateDestroyAPIView):
             }, status=status.HTTP_204_NO_CONTENT)
 
         return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
+    
+class CancelOrderAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, order_id):
+        try:
+            order = Order.objects.get(id=order_id, user=request.user)
+
+            if order.delivery_status != 'cancelled':
+                order.cancel_order()
+                return Response({"detail": "Order cancelled successfully."}, status=status.HTTP_200_OK)
+            else:
+                return Response({"detail": "Order is already cancelled."}, status=status.HTTP_400_BAD_REQUEST)
+
+        except Order.DoesNotExist:
+            return Response({"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": f"Error cancelling order: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
