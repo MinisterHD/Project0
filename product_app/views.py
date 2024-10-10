@@ -12,7 +12,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.generics import (CreateAPIView,RetrieveUpdateDestroyAPIView,
                                         ListAPIView,CreateAPIView)
 from rest_framework.permissions import IsAuthenticated,IsAuthenticatedOrReadOnly
-from rest_framework.parsers import JSONParser,FormParser,MultiPartParser
+from rest_framework.parsers import JSONParser,MultiPartParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import ValidationError,NotFound
 from parler.utils.context import activate
@@ -95,7 +95,7 @@ class CategoryAPIView(RetrieveUpdateDestroyAPIView):
 class CreateSubcategoryAPIView(CreateAPIView):
   queryset = Subcategory.objects.all()
   serializer_class = SubcategorySerializer
-  permission_classes = [IsAuthenticated]
+  #permission_classes = [IsAuthenticated]
   authentication_classes = [JWTAuthentication]
   parser_classes = [JSONParser]
   def create(self, request, *args, **kwargs):
@@ -115,7 +115,7 @@ class SubcategoryListAPIView(generics.ListAPIView):
         return queryset
     
 class SubcategoryAPIView(RetrieveUpdateDestroyAPIView): 
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
     queryset = Subcategory.objects.all()
@@ -153,19 +153,22 @@ class SubcategoryAPIView(RetrieveUpdateDestroyAPIView):
         subcategory = self.get_object()
         serializer = SubcategorySerializer(subcategory)
         return Response(serializer.data)
+
 #Products
 class CreateProductAPIView(CreateAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     parser_classes = [MultiPartParser]  
 
     def create(self, request, *args, **kwargs):
         language = request.data.get('language', 'en')
         activate(language)
-        return super().create(request, *args, **kwargs)
-    
+        response = super().create(request, *args, **kwargs)
+
+        
+        return response
+ 
 class ProductListAPIView(ListAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
@@ -215,7 +218,7 @@ class ProductListAPIView(ListAPIView):
 class ProductAPIView(RetrieveUpdateDestroyAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    #permission_classes = [IsAuthenticatedOrReadOnly]
     lookup_url_kwarg = 'product_id'
     def get_object(self):
         try:
@@ -233,9 +236,12 @@ class ProductAPIView(RetrieveUpdateDestroyAPIView):
         try:
             return super().update(request, *args, **kwargs)
         except ValidationError as e:
-            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'validation_errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+        except KeyError as e:
+            return Response({'error': f'Missing required field: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'error': 'An error occurred while updating the Product.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': 'An error occurred while updating the Product.', 'details': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
     def destroy(self, request, *args, **kwargs):
         try:
@@ -248,7 +254,7 @@ class ProductAPIView(RetrieveUpdateDestroyAPIView):
 
 #Comments
 class CreateCommentAPIView(generics.CreateAPIView):
-    permission_classes = [IsAuthenticated]
+    #permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     serializer_class = CommentSerializer
     def create(self, request, *args, **kwargs):

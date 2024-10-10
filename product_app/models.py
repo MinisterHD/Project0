@@ -1,11 +1,7 @@
 from django.db import models
 from user_app.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.db.models.signals import pre_save
-from django.dispatch import receiver
 from parler.models import TranslatableModel, TranslatedFields
-
-
 
 class Category(TranslatableModel):
     translations = TranslatedFields(
@@ -36,16 +32,12 @@ class Rating(models.Model):
     def __str__(self):
         return f'{self.rating} by {self.user}'
 
-from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
-from parler.models import TranslatableModel, TranslatedFields
-
 class Product(TranslatableModel):
     translations = TranslatedFields(
         name=models.CharField(max_length=255, null=False, blank=False, unique=True),
         description=models.TextField(max_length=2000, null=True, blank=True),
     )
-    brand = models.CharField(max_length=50, default='No Brand', null=False, blank=False)
+    brand = models.CharField(max_length=50, default='No Brand', null=True, blank=True)
     slugname = models.SlugField(max_length=255, unique=True, default='default-slug')
     price = models.PositiveIntegerField(null=False, blank=False)
     discount_percentage = models.PositiveIntegerField(
@@ -56,7 +48,7 @@ class Product(TranslatableModel):
     stock = models.PositiveIntegerField(default=0)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     subcategory = models.ForeignKey(Subcategory, on_delete=models.CASCADE, blank=True, null=True)
-    
+
     image1 = models.ImageField(upload_to='products/images/', blank=True, null=True)
     image2 = models.ImageField(upload_to='products/images/', blank=True, null=True)
     image3 = models.ImageField(upload_to='products/images/', blank=True, null=True)
@@ -67,13 +59,8 @@ class Product(TranslatableModel):
     updated_at = models.DateTimeField(auto_now=True)
     sales_count = models.IntegerField(default=0)
 
-    def save(self, *args, **kwargs):
-        self.price_after_discount = self.price * (1 - (self.discount_percentage / 100))
-        super().save(*args, **kwargs)
-
     def __str__(self):
         return self.name
-
 
 class Comment(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='comments',null=False,blank=False)
@@ -83,8 +70,3 @@ class Comment(models.Model):
 
     def __str__(self):
         return f'Comment by {self.owner} on {self.product}'
-
-@receiver(pre_save, sender=Product)
-def calculate_price_after_discount(sender, instance, **kwargs):
-    instance.price_after_discount = instance.price * (1 - (instance.discount_percentage / 100))
-    

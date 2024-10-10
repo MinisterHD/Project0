@@ -3,13 +3,6 @@ from .models import *
 from django.core.files.storage import default_storage
 from parler_rest.serializers import TranslatableModelSerializer, TranslatedFieldsField
 
-class CategorySerializer(TranslatableModelSerializer):
-    translations = TranslatedFieldsField(shared_model=Category)
-
-    class Meta:
-        model = Category
-        fields = ['id', 'translations','slugname']  
-
 class SubcategorySerializer(TranslatableModelSerializer):
     translations = TranslatedFieldsField(shared_model=Subcategory)
     category_name = serializers.CharField(source='category.name', read_only=True)
@@ -23,7 +16,14 @@ class SubcategorySerializer(TranslatableModelSerializer):
                  'name': obj.safe_translation_getter('name', language_code=lang)
                 }
                  for lang in obj.get_available_languages()   }
+    
+class CategorySerializer(TranslatableModelSerializer):
+    translations = TranslatedFieldsField(shared_model=Category)
+    sub_categories = SubcategorySerializer(many=True, read_only=True, source='subcategory_set')
 
+    class Meta:
+        model = Category
+        fields = ['id', 'translations', 'slugname', 'sub_categories']
 
 class ProductSerializer(TranslatableModelSerializer):
     translations_en_name = serializers.CharField(write_only=True, required=True)
@@ -36,30 +36,42 @@ class ProductSerializer(TranslatableModelSerializer):
         write_only=True,
         required=False 
     )
-    
+    translations = serializers.SerializerMethodField(read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
+    subcategory_name = serializers.CharField(source='subcategory.name', read_only=True)
     category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
 
     class Meta:
         model = Product
         fields = '__all__'
-        read_only_fields = ["id", "created_at", "updated_at", "price_after_discount"]
-
+        read_only_fields = ["id", "created_at", "updated_at"]
+    def get_translations(self, obj):
+        """Return translations for the product."""
+        return {
+            'en': {
+                'name': obj.safe_translation_getter('name', language_code='en'),
+                'description': obj.safe_translation_getter('description', language_code='en')
+            },
+            'fa': {
+                'name': obj.safe_translation_getter('name', language_code='fa'),
+                'description': obj.safe_translation_getter('description', language_code='fa')
+            },
+        }
+    
     def create(self, validated_data):
+        images = validated_data.pop('images', None)  
 
-        images = validated_data.pop('images', None)
-
- 
         product = Product.objects.create(
             brand=validated_data.pop('brand'),
             slugname=validated_data.pop('slugname'),
             price=validated_data.pop('price'),
             stock=validated_data.pop('stock'),
             category=validated_data.pop('category'),
-            subcategory=validated_data.pop('subcategory', None)
+            subcategory=validated_data.pop('subcategory', None),
+            discount_percentage=validated_data.pop('discount_percentage',None)
         )
 
- 
+      
         translations = {
             'en': {
                 'name': validated_data.pop('translations_en_name'),
@@ -77,57 +89,58 @@ class ProductSerializer(TranslatableModelSerializer):
             product.description = translation['description']
             product.save_translations()
 
- 
-        if images:
-            image_urls = []
-            for image in images:
-                image_path = self.save_image(image)
-                image_urls.append(image_path)
-
-            product.images = image_urls
+        if images and isinstance(images, list):
+            if len(images) > 0:
+                product.image1 = images[0]
+            if len(images) > 1:
+                product.image2 = images[1]
+            if len(images) > 2:
+                product.image3 = images[2]
+            if len(images) > 3:
+                product.image4 = images[3]
 
         product.save()
         return product
 
     def update(self, instance, validated_data):
-        images = validated_data.pop('images', None)
+        images = validated_data.get('images', None)
 
- 
+        # Update all the regular fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
-    
+        # Update translations
         translations = {
             'en': {
-                'name': validated_data.pop('translations_en_name', instance.safe_translation_getter('name', language='en')),
-                'description': validated_data.pop('translations_en_description', instance.safe_translation_getter('description', language='en')),
+                'name': validated_data.get('translations_en_name', instance.safe_translation_getter('name', default=None, language_code='en')),
+                'description': validated_data.get('translations_en_description', instance.safe_translation_getter('description', default=None, language_code='en')),
             },
             'fa': {
-                'name': validated_data.pop('translations_fa_name', instance.safe_translation_getter('name', language='fa')),
-                'description': validated_data.pop('translations_fa_description', instance.safe_translation_getter('description', language='fa')),
+                'name': validated_data.get('translations_fa_name', instance.safe_translation_getter('name', default=None, language_code='fa')),
+                'description': validated_data.get('translations_fa_description', instance.safe_translation_getter('description', default=None, language_code='fa')),
             },
         }
 
+        # Set translations for each language
         for lang, translation in translations.items():
             instance.set_current_language(lang)
             instance.name = translation['name']
             instance.description = translation['description']
             instance.save_translations()
 
-      
-        if images:
-            image_urls = []
-            for image in images:
-                image_path = self.save_image(image)
-                image_urls.append(image_path)
-            instance.images = image_urls
+        # Handle images if provided
+        if images and isinstance(images, list):
+            if len(images) > 0:
+                instance.image1 = images[0]
+            if len(images) > 1:
+                instance.image2 = images[1]
+            if len(images) > 2:
+                instance.image3 = images[2]
+            if len(images) > 3:
+                instance.image4 = images[3]
 
         instance.save()
         return instance
-
-    def save_image(self, image):
-        return default_storage.save(f'products/images/{image.name}', image)
-
 
 class ProductDetailSerializer(TranslatableModelSerializer):
     translations = TranslatedFieldsField(shared_model=Product)
@@ -135,11 +148,22 @@ class ProductDetailSerializer(TranslatableModelSerializer):
         model = Product
         fields = '__all__' 
 
+
 class CommentSerializer(serializers.ModelSerializer):
+    owner_name = serializers.SerializerMethodField()
+    owner_email = serializers.SerializerMethodField()
+
     class Meta:
         model = Comment
-        fields   = ('id', 'owner', 'text', 'created_at',"product")
+        fields = ('id', 'owner', 'owner_name', 'owner_email', 'text', 'created_at', 'product')
         read_only_fields = ['id', 'created_at']
+
+    def get_owner_name(self, obj):
+        return obj.owner.username 
+    
+    def get_owner_email(self, obj):
+        return obj.owner.email
+
 
 class RatingCreateSerializer(serializers.ModelSerializer):
     class Meta:

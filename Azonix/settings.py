@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'parler',
     'user_app',
-    'product_app',
+    'product_app.apps.ProductAppConfig',
     'order_app',
     'chat_app',
     'django_filters',

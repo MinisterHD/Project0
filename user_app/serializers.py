@@ -4,12 +4,6 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import AuthenticationFailed,ValidationError
 
-
-class UserLoginSerializer(serializers.ModelSerializer):
-    class Meta:
-        model=User
-        fields = '__all__' 
-
 class UserSignUpSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -28,28 +22,35 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         try:
             data = super().validate(attrs)
             refresh = RefreshToken(data['refresh'])
-            data['refresh'] = str(refresh)
+            token_data = {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh)
+            }
             user = self.user
-            data['user'] = {
+            user_data = {
                 'id': user.id,
                 'username': user.username,
-                'email': user.email, 
-                'firstname':user.first_name,
-                'lasttname':user.last_name,
-                'phone_number':user.phone_number,
-                'password':user.password,
-                'address':user.address,
-                'is_staff':user.is_staff,
-                'date_joined':user.date_joined,
-            }           
-            return data
+                'email': user.email,
+                'firstname': user.first_name,
+                'lastname': user.last_name,
+                'phone_number': user.phone_number,
+                'address': user.address,
+                'is_staff': user.is_staff,
+                'date_joined': user.date_joined,
+            }
+            return {
+                'token': token_data,
+                'user': user_data
+            }
+            
         except AuthenticationFailed as exc:
             raise ValidationError({'detail': str(exc)}, code='authentication_failed')
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model=User
-        fields = '__all__' 
+        exclude = ["last_login"]
+
         read_only_fields=['user_permissions','groups']
 
 

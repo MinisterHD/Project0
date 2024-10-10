@@ -11,16 +11,10 @@ from rest_framework.parsers import JSONParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import ValidationError
 import logging
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.utils.translation import gettext_lazy as _
 
 #Auth
-from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
-from django.utils.translation import gettext_lazy as _
-from rest_framework import status
-from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
-from rest_framework.generics import CreateAPIView
-from django.contrib.auth.hashers import make_password
-
 class SignUpView(CreateAPIView):
     serializer_class = UserSignUpSerializer
     parser_classes = [JSONParser]
@@ -59,7 +53,6 @@ class SignUpView(CreateAPIView):
         except Exception as e:
             return Response({'errors': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 class LoginView(GenericAPIView):
     serializer_class = CustomTokenObtainPairSerializer
     parser_classes = [JSONParser]
@@ -68,7 +61,7 @@ class LoginView(GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
-            return Response(serializer.validated_data, status=status.HTTP_200_OK)
+            return Response({"data":serializer.validated_data}, status=status.HTTP_200_OK)
 
         except ValidationError as e:
             return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
@@ -103,6 +96,8 @@ class UserView(generics.RetrieveUpdateDestroyAPIView):
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
+        if 'password' in request.data:
+            request.data['password'] = make_password(request.data['password'])
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -111,4 +106,4 @@ class UserView(generics.RetrieveUpdateDestroyAPIView):
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [IsAdminUser]
+    #permission_classes = [IsAdminUser]
