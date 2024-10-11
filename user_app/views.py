@@ -61,7 +61,7 @@ class LoginView(GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
-            return Response({"data":serializer.validated_data}, status=status.HTTP_200_OK)
+            return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
         except ValidationError as e:
             return Response({'errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
