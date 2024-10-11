@@ -39,7 +39,7 @@ class ProductSerializer(TranslatableModelSerializer):
 
     slugname = serializers.CharField(required=False)
     stock = serializers.IntegerField(required=False)
-    price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    price = serializers.IntegerField( required=False)
 
     translations = serializers.SerializerMethodField(read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
@@ -64,18 +64,22 @@ class ProductSerializer(TranslatableModelSerializer):
         }
 
     def create(self, validated_data):
+        translations_en_name = validated_data.pop('translations_en_name', None)
+        translations_en_description = validated_data.pop('translations_en_description', None)
+        translations_fa_name = validated_data.pop('translations_fa_name', None)
+        translations_fa_description = validated_data.pop('translations_fa_description', None)
         images = validated_data.pop('images', None)
 
         product = Product.objects.create(**validated_data)
 
         translations = {
             'en': {
-                'name': validated_data.pop('translations_en_name', None),
-                'description': validated_data.pop('translations_en_description', None),
+                'name': translations_en_name,
+                'description': translations_en_description,
             },
             'fa': {
-                'name': validated_data.pop('translations_fa_name', None),
-                'description': validated_data.pop('translations_fa_description', None),
+                'name': translations_fa_name,
+                'description': translations_fa_description,
             },
         }
 
