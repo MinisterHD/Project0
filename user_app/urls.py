@@ -7,7 +7,6 @@ from .views import (
     UserListView,
     
 )
-
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [

@@ -13,7 +13,7 @@ class Order(models.Model):
             ('delivered', 'Delivered'),
             ('cancelled', 'Cancelled')
         ]
-    )
+    ,blank=False,null=False)
     total_price = models.PositiveIntegerField(default=0)
     order_date = models.DateTimeField(auto_now_add=True)
     delivery_date = models.DateTimeField(auto_now_add=True, null=True)

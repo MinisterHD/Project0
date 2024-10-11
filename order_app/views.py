@@ -1,5 +1,5 @@
 import logging
-from rest_framework import status, filters, permissions
+from rest_framework import status, filters, permissions,generics
 from rest_framework.generics import CreateAPIView, RetrieveUpdateDestroyAPIView, ListAPIView
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
@@ -12,12 +12,13 @@ from product_app.models import Product
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 from rest_framework.views import APIView
+from .permissions import IsOwnerOrAdmin
 logger = logging.getLogger(__name__)
 
 # Orders
 
 class CreateOrderAPIView(CreateAPIView):
-    #permission_classes = [permissions.IsAuthenticated]
+    # permission_classes = [permissions.IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
@@ -35,14 +36,19 @@ class CreateOrderAPIView(CreateAPIView):
         total_price = 0  
 
 
-        order = Order(user=request.user, delivery_address=request.data.get('delivery_address'))
+        delivery_status = request.data.get('delivery_status', 'pending')
+
+        order = Order(
+            user=request.user, 
+            delivery_address=request.data.get('delivery_address'),
+            delivery_status=delivery_status  
+        )
         order_items = []  
 
         for item_data in order_items_data:
             try:
                 product_id = item_data['product'] 
                 quantity = item_data['quantity']  
-
 
                 if product_id is None or quantity is None:
                     return Response({"detail": "Product ID and quantity must be provided."}, status=status.HTTP_400_BAD_REQUEST)
@@ -53,7 +59,6 @@ class CreateOrderAPIView(CreateAPIView):
 
                 total_price += product.price * quantity
 
- 
                 order_item = OrderItem(order=order, product=product, quantity=quantity)
                 order_items.append(order_item)
 
@@ -65,7 +70,6 @@ class CreateOrderAPIView(CreateAPIView):
                 return Response({"detail": f"Product with ID {product_id} does not exist."}, status=status.HTTP_404_NOT_FOUND)
             except KeyError as e:
                 return Response({"detail": f"Missing field: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
-
 
         order.total_price = total_price
         order.save()
@@ -113,7 +117,6 @@ class OrderAPIView(RetrieveUpdateDestroyAPIView):
             logger.error(f"Delete failed: {e}")
             return Response({"detail": "Unable to delete order"}, status=status.HTTP_400_BAD_REQUEST)
     def get_queryset(self):
-        # Prefetch related order_items and their associated product to avoid extra queries
         return super().get_queryset().prefetch_related('order_items__product')
         
 class OrderListAPIView(ListAPIView):
@@ -191,54 +194,50 @@ class AddToCartAPIView(CreateAPIView):
             "cart":cart_serializer.data
         }, status=status.HTTP_201_CREATED)
 
-class CartItemAPIView(RetrieveUpdateDestroyAPIView):
-    #permission_classes = [IsAuthenticated]
+class CartItemAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CartItemSerializer
+    permission_classes = [IsOwnerOrAdmin]
 
-    def get_object(self, user, product_id):
+    def get_object(self):
+        user_id = self.kwargs['user_id']
+        product_id = self.kwargs['product_id']
         try:
+            user = User.objects.get(id=user_id)
             cart = Cart.objects.get(user=user)
             return CartItem.objects.get(cart=cart, product__id=product_id)
-        except (Cart.DoesNotExist, CartItem.DoesNotExist):
+        except (User.DoesNotExist, Cart.DoesNotExist, CartItem.DoesNotExist):
             return None
 
-    def get(self, request, product_id):
-        cart_item = self.get_object(request.user, product_id)
+    def get(self, request, user_id, product_id):
+        cart_item = self.get_object()
         if cart_item:
-            cart_serializer = CartSerializer(cart_item.cart) 
+            cart_serializer = CartSerializer(cart_item.cart)
             return Response(cart_serializer.data, status=status.HTTP_200_OK)
-
         return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    def put(self, request, product_id):
-        cart_item = self.get_object(request.user, product_id)
+    def put(self, request, user_id, product_id):
+        cart_item = self.get_object()
         if cart_item:
             quantity = request.data.get('quantity')
             if quantity is None or quantity <= 0:
                 return Response({"detail": "Invalid quantity."}, status=status.HTTP_400_BAD_REQUEST)
-
             cart_item.quantity = quantity
             cart_item.save()
-
-            cart_serializer = CartSerializer(cart_item.cart)  
+            cart_serializer = CartSerializer(cart_item.cart)
             return Response({
                 "detail": "Cart item updated.",
-                "cart": cart_serializer.data  
+                "cart": cart_serializer.data
             }, status=status.HTTP_200_OK)
-
         return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    def delete(self, request, product_id):
-        cart_item = self.get_object(request.user, product_id)
+    def delete(self, request, user_id, product_id):
+        cart_item = self.get_object()
         if cart_item:
             cart = cart_item.cart
             cart_item.delete()
-
-            cart_serializer = CartSerializer(cart)  
+            cart_serializer = CartSerializer(cart)
             return Response({
                 "detail": "Product removed from cart.",
-                "cart": cart_serializer.data 
+                "cart": cart_serializer.data
             }, status=status.HTTP_204_NO_CONTENT)
-
         return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
-    

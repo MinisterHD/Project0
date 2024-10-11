@@ -1,6 +1,7 @@
 from .models import *
 from .serializers import *
 from django.contrib.auth.hashers import make_password
+from rest_framework import generics, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
@@ -14,6 +15,7 @@ import logging
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.pagination import PageNumberPagination
 
 #Auth
 class SignUpView(CreateAPIView):
@@ -109,8 +111,28 @@ class UserView(generics.RetrieveUpdateDestroyAPIView):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+class UserPagination(PageNumberPagination):
+    page_size_query_param = 'page_size'  
+
+    def get_paginated_response(self, data):
+        return Response({
+            'count': self.page.paginator.count,
+            'total_pages': self.page.paginator.num_pages,
+            'next': self.get_next_link(),
+            'previous': self.get_previous_link(),
+            'results': data
+        })
 
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    #permission_classes = [IsAdminUser]
+    pagination_class = UserPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['is_staff'] 
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        is_staff = self.request.query_params.get('is_staff', None)
+        if is_staff is not None:
+            queryset = queryset.filter(is_staff=is_staff)
+        return queryset

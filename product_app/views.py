@@ -219,6 +219,7 @@ class ProductAPIView(RetrieveUpdateDestroyAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     #permission_classes = [IsAuthenticatedOrReadOnly]
+    parser_classes = [MultiPartParser,JSONParser]
     lookup_url_kwarg = 'product_id'
     def get_object(self):
         try:
@@ -234,11 +235,17 @@ class ProductAPIView(RetrieveUpdateDestroyAPIView):
 
     def update(self, request, *args, **kwargs):
         try:
-            return super().update(request, *args, **kwargs)
+            instance = self.get_object()
+            serializer = self.get_serializer(instance, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response({'validation_errors': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+    
         except KeyError as e:
             return Response({'error': f'Missing required field: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+        
         except Exception as e:
             return Response({'error': 'An error occurred while updating the Product.', 'details': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

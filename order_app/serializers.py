@@ -24,7 +24,7 @@ class OrderSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True) 
     class Meta:
         model = Order
-        fields = ['user', 'delivery_address', 'delivery_status', 'total_price', 'order_date', 'delivery_date', 'order_items']
+        fields = ["id",'user', 'delivery_address', 'delivery_status', 'total_price', 'order_date', 'delivery_date', 'order_items']
         read_only_fields = ['id', 'user', 'order_date', 'total_price']  
     def create(self, validated_data):
         order_items_data = validated_data.pop('order_items')
