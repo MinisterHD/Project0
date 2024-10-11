@@ -13,6 +13,7 @@ from rest_framework.exceptions import ValidationError
 import logging
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils.translation import gettext_lazy as _
+from rest_framework.exceptions import PermissionDenied
 
 #Auth
 class SignUpView(CreateAPIView):
@@ -84,15 +85,20 @@ class LogoutView(APIView):
             return Response(data={'message': 'An error occurred during logout.', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 #UserManagement
+
 class UserView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     #permission_classes = [IsAuthenticated]
-    parser_classes=[JSONParser]
-    def get_queryset(self):
-        if self.request.user.is_superuser:
-            return User.objects.all()
-        return User.objects.filter(id=self.request.user.id)
+    parser_classes = [JSONParser]
+
+    def get_object(self):
+        obj = super().get_object()
+        
+        if self.request.user.is_staff or obj.id == self.request.user.id:
+            return obj
+        
+        raise PermissionDenied("You do not have permission to access this user's profile.")
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -102,6 +108,7 @@ class UserView(generics.RetrieveUpdateDestroyAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
