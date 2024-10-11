@@ -241,3 +241,22 @@ class CartItemAPIView(generics.RetrieveUpdateDestroyAPIView):
                 "cart": cart_serializer.data
             }, status=status.HTTP_204_NO_CONTENT)
         return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
+    
+class UserCartAPIView(generics.RetrieveAPIView):
+    serializer_class = CartSerializer
+    permission_classes = [IsOwnerOrAdmin]
+
+    def get_object(self):
+        user_id = self.kwargs['user_id']
+        try:
+            user = User.objects.get(id=user_id)
+            return Cart.objects.get(user=user)
+        except (User.DoesNotExist, Cart.DoesNotExist):
+            return None
+
+    def get(self, request, user_id):
+        cart = self.get_object()
+        if cart:
+            cart_serializer = CartSerializer(cart)
+            return Response(cart_serializer.data, status=status.HTTP_200_OK)
+        return Response({"detail": "Cart not found."}, status=status.HTTP_404_NOT_FOUND)    
