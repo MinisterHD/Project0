@@ -32,9 +32,3 @@ urlpatterns = [
     path('wishlist/<int:user_id>/add/', AddToWishlistAPIView.as_view(), name='add-to-wishlist'),
     path('wishlists/', AdminWishlistListAPIView.as_view(), name='admin-wishlist-list'),
   ]
-
-
-urlpatterns = [
-    # Other URL patterns...
-
-]
