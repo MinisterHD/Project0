@@ -7,13 +7,14 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.parsers import JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import *
-from .serializers import OrderSerializer, CartItemSerializer, CartSerializer
+from .serializers import OrderSerializer, CartItemSerializer, CartSerializer,WishlistSerializer
 from product_app.models import Product
 from rest_framework.permissions import IsAuthenticated,IsAuthenticatedOrReadOnly,IsAdminUser
 from rest_framework import serializers
 from rest_framework.views import APIView
 from .permissions import IsOwnerOrAdmin,IsAdminOrReadOnly
 from django.db import IntegrityError, transaction
+from django.shortcuts import get_object_or_404
 
 logger = logging.getLogger(__name__)
 
@@ -297,3 +298,113 @@ class UserCartAPIView(generics.RetrieveAPIView):
         except Exception as e:
             logger.error(f"Error retrieving user cart: {str(e)}")
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+#WishList
+class WishlistAPIView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = WishlistSerializer
+    permission_classes = [IsOwnerOrAdmin]
+
+    def get_object(self):
+        user_id = self.kwargs.get('user_id')
+        try:
+            wishlist, created = Wishlist.objects.get_or_create(user_id=user_id)
+            return wishlist
+        except Wishlist.DoesNotExist:
+            raise NotFound(detail="Wishlist not found", code=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error retrieving wishlist for user {user_id}: {str(e)}")
+            raise
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            wishlist = self.get_object()
+            serializer = self.get_serializer(wishlist)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except NotFound as e:
+            return Response({"detail": str(e)}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error retrieving wishlist: {str(e)}")
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def update(self, request, *args, **kwargs):
+        try:
+            wishlist = self.get_object()
+            serializer = self.get_serializer(wishlist, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except serializers.ValidationError as e:
+            logger.error(f"Validation error: {e.detail}")
+            return Response({"detail": e.detail}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Error updating wishlist: {str(e)}")
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            wishlist = self.get_object()
+            wishlist.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except NotFound as e:
+            return Response({"detail": str(e)}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error deleting wishlist: {str(e)}")
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class AddToWishlistAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        user_id = self.kwargs.get('user_id')
+        product_id = request.data.get('product_id')
+
+        if not product_id:
+            return Response({"detail": "Product ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            product = get_object_or_404(Product, id=product_id)
+            wishlist, created = Wishlist.objects.get_or_create(user_id=user_id)
+            wishlist_item, created = WishlistItem.objects.get_or_create(wishlist=wishlist, product=product)
+            if created:
+                return Response({"detail": "Product added to wishlist."}, status=status.HTTP_201_CREATED)
+            else:
+                return Response({"detail": "Product is already in the wishlist."}, status=status.HTTP_200_OK)
+        except Product.DoesNotExist:
+            return Response({"detail": "Product not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error adding product {product_id} to wishlist for user {user_id}: {str(e)}")
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class AdminWishlistListAPIView(ListAPIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
+    serializer_class = WishlistSerializer
+    queryset = Wishlist.objects.all()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['user__username']
+    search_fields = ['user__username']
+    ordering_fields = ['user__username']
+    ordering = ['user__username']
+
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error(f"Error listing wishlists: {str(e)}")
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminUser]
+    serializer_class = WishlistSerializer
+    queryset = Wishlist.objects.all()
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['user__username']
+    search_fields = ['user__username']
+    ordering_fields = ['user__username']
+    ordering = ['user__username']

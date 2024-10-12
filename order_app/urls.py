@@ -8,6 +8,9 @@ from .views import (
     CancelOrderAPIView,
     UserCartAPIView,
     UserOrdersAPIView,
+    WishlistAPIView,
+    AddToWishlistAPIView,
+    AdminWishlistListAPIView,
 )
 
 
@@ -23,7 +26,15 @@ urlpatterns = [
     path('cart/add/', AddToCartAPIView.as_view(), name='add-to-cart'),
     path('cart/<int:user_id>/item/<int:product_id>/', CartItemAPIView.as_view(), name='cart-item-detail'),
     path('cart/<int:user_id>/', UserCartAPIView.as_view(), name='user-cart'),
+
+
+    path('wishlist/<int:user_id>/', WishlistAPIView.as_view(), name='wishlist'),
+    path('wishlist/<int:user_id>/add/', AddToWishlistAPIView.as_view(), name='add-to-wishlist'),
+    path('wishlists/', AdminWishlistListAPIView.as_view(), name='admin-wishlist-list'),
   ]
 
 
+urlpatterns = [
+    # Other URL patterns...
 
+]

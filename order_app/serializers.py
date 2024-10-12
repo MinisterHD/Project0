@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Order,CartItem,Cart,OrderItem
+from .models import Order,CartItem,Cart,OrderItem,Wishlist, WishlistItem
 from product_app.serializers import ProductSerializer,ProductDetailSerializer
 from product_app.models import Product
 from django.db import transaction
@@ -86,3 +86,16 @@ class CartSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cart
         fields = ['id', 'user', 'created_at', 'items'] 
+
+
+class WishlistItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WishlistItem
+        fields = ['id', 'product', 'added_at']
+
+class WishlistSerializer(serializers.ModelSerializer):
+    items = WishlistItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Wishlist
+        fields = ['id', 'user', 'items']
