@@ -6,15 +6,14 @@ from user_app.models import User
 
 class ChatMessageViewSetTests(APITestCase):
     def setUp(self):
-        # Create a user for authentication
+
         self.user = User.objects.create_user(username='testuser', password='testpassword')
         self.client.login(username='testuser', password='testpassword')
-        
-        # Create some initial chat messages
+
         self.chat_message1 = ChatMessage.objects.create(user=self.user, message="Hello, world!")
         self.chat_message2 = ChatMessage.objects.create(user=self.user, message="Another message")
         
-        # URLs
+
         self.list_url = reverse('chatmessage-list')
         self.detail_url = lambda pk: reverse('chatmessage-detail', kwargs={'pk': pk})
 

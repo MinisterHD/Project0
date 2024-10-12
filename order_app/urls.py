@@ -11,6 +11,7 @@ from .views import (
     WishlistAPIView,
     AddToWishlistAPIView,
     AdminWishlistListAPIView,
+    RemoveFromWishlistAPIView,
 )
 
 
@@ -31,4 +32,5 @@ urlpatterns = [
     path('wishlist/<int:user_id>/', WishlistAPIView.as_view(), name='wishlist'),
     path('wishlist/<int:user_id>/add/', AddToWishlistAPIView.as_view(), name='add-to-wishlist'),
     path('wishlists/', AdminWishlistListAPIView.as_view(), name='admin-wishlist-list'),
+    path('wishlist/<int:user_id>/remove/<int:product_id>/', RemoveFromWishlistAPIView.as_view(), name='remove-from-wishlist'),
   ]

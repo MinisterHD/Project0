@@ -52,7 +52,3 @@ class UserSerializer(serializers.ModelSerializer):
         exclude = ["last_login"]
 
         read_only_fields=['user_permissions','groups']
-
-
-  
-

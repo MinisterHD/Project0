@@ -1,5 +1,5 @@
 import logging
-from rest_framework import status, filters, permissions, generics
+from rest_framework import status, filters, generics
 from rest_framework.generics import CreateAPIView, RetrieveUpdateDestroyAPIView, ListAPIView
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
@@ -15,9 +15,23 @@ from rest_framework.views import APIView
 from .permissions import IsOwnerOrAdmin,IsAdminOrReadOnly
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
-
+from rest_framework.pagination import PageNumberPagination
 logger = logging.getLogger(__name__)
 
+
+class CustomPageNumberPagination(PageNumberPagination):
+    page_size_query_param = 'page_size'
+
+    def get_paginated_response(self, data):
+        return Response({
+            'count': self.page.paginator.count,
+            'total_pages': self.page.paginator.num_pages,
+            'next': self.get_next_link(),
+            'previous': self.get_previous_link(),
+            'results': data
+        })
+
+#Order
 class UserOrdersAPIView(ListAPIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsOwnerOrAdmin]
@@ -26,10 +40,23 @@ class UserOrdersAPIView(ListAPIView):
     filterset_fields = ['delivery_status', 'order_date']
     ordering_fields = ['delivery_date', 'order_date']
     ordering = ['-order_date']
+    pagination_class = CustomPageNumberPagination
 
     def get_queryset(self):
         user_id = self.kwargs.get('user_id')
-        return Order.objects.filter(user_id=user_id).prefetch_related('order_items__product')
+        queryset = Order.objects.filter(user_id=user_id).prefetch_related('order_items__product')
+        
+        params = self.request.query_params
+        sort_field = params.get('sort_field', 'order_date')
+        sort_order = params.get('sort_order', 'desc')
+
+        if sort_field not in ['delivery_date', 'order_date']:
+            sort_field = 'order_date'
+
+        order_by = sort_field if sort_order == 'asc' else f'-{sort_field}'
+        queryset = queryset.order_by(order_by)
+
+        return queryset
 
 class OrderAPIView(RetrieveUpdateDestroyAPIView):
     authentication_classes = [JWTAuthentication]
@@ -145,6 +172,7 @@ class OrderListAPIView(ListAPIView):
     filterset_fields = ['delivery_status', 'user', 'order_date'] 
     ordering_fields = ['delivery_date', 'order_date']
     ordering = ['-order_date']
+    pagination_class = CustomPageNumberPagination
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -153,12 +181,14 @@ class OrderListAPIView(ListAPIView):
         if 'deliveryStatus' in params:
             queryset = queryset.filter(delivery_status=params['deliveryStatus'])
 
-        if self.request.query_params.get('sort') == 'asc':
-            return queryset.order_by('delivery_date')
-        
-        if 'sort' in params:
-            order_by = 'delivery_date' if params['sort'] == 'asc' else '-delivery_date' 
-            queryset = queryset.order_by(order_by)
+        sort_field = params.get('sort_field', 'delivery_date')
+        sort_order = params.get('sort_order', 'desc')
+
+        if sort_field not in ['delivery_date', 'order_date']:
+            sort_field = 'delivery_date'
+
+        order_by = sort_field if sort_order == 'asc' else f'-{sort_field}'
+        queryset = queryset.order_by(order_by)
 
         return queryset
 
@@ -181,7 +211,7 @@ class CancelOrderAPIView(APIView):
             logger.error(f"Error cancelling order: {str(e)}")
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# Cart
+#Cart
 class AddToCartAPIView(CreateAPIView):
     permission_classes = [IsOwnerOrAdmin]
 
@@ -408,3 +438,23 @@ class AdminWishlistListAPIView(ListAPIView):
     search_fields = ['user__username']
     ordering_fields = ['user__username']
     ordering = ['user__username']
+
+class RemoveFromWishlistAPIView(APIView):
+    permission_classes = [IsOwnerOrAdmin]
+
+    def delete(self, request, *args, **kwargs):
+        user_id = self.kwargs.get('user_id')
+        product_id = self.kwargs.get('product_id')
+
+        try:
+            wishlist = Wishlist.objects.get(user_id=user_id)
+            wishlist_item = WishlistItem.objects.get(wishlist=wishlist, product_id=product_id)
+            wishlist_item.delete()
+            return Response({"detail": "Product removed from wishlist."}, status=status.HTTP_204_NO_CONTENT)
+        except Wishlist.DoesNotExist:
+            return Response({"detail": "Wishlist not found."}, status=status.HTTP_404_NOT_FOUND)
+        except WishlistItem.DoesNotExist:
+            return Response({"detail": "Product not found in wishlist."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error removing product {product_id} from wishlist for user {user_id}: {str(e)}")
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
