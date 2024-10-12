@@ -9,17 +9,30 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import *
 from .serializers import OrderSerializer, CartItemSerializer, CartSerializer
 from product_app.models import Product
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated,IsAuthenticatedOrReadOnly,IsAdminUser
 from rest_framework import serializers
 from rest_framework.views import APIView
-from .permissions import IsOwnerOrAdmin
+from .permissions import IsOwnerOrAdmin,IsAdminOrReadOnly
 from django.db import IntegrityError, transaction
 
 logger = logging.getLogger(__name__)
 
+class UserOrdersAPIView(ListAPIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsOwnerOrAdmin]
+    serializer_class = OrderSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['delivery_status', 'order_date']
+    ordering_fields = ['delivery_date', 'order_date']
+    ordering = ['-order_date']
+
+    def get_queryset(self):
+        user_id = self.kwargs.get('user_id')
+        return Order.objects.filter(user_id=user_id).prefetch_related('order_items__product')
+
 class OrderAPIView(RetrieveUpdateDestroyAPIView):
     authentication_classes = [JWTAuthentication]
-    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly,IsAdminOrReadOnly]
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     parser_classes = [JSONParser]
@@ -60,7 +73,7 @@ class OrderAPIView(RetrieveUpdateDestroyAPIView):
         return super().get_queryset().prefetch_related('order_items__product')
 
 class CreateOrderAPIView(CreateAPIView):
-    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
@@ -124,7 +137,7 @@ class CreateOrderAPIView(CreateAPIView):
 
 class OrderListAPIView(ListAPIView):
     authentication_classes = [JWTAuthentication] 
-    # permission_classes = [permissions.IsAuthenticated]  
+    permission_classes = [IsAdminUser]  
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -149,7 +162,7 @@ class OrderListAPIView(ListAPIView):
         return queryset
 
 class CancelOrderAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsOwnerOrAdmin]
 
     def post(self, request, order_id):
         try:
@@ -169,7 +182,7 @@ class CancelOrderAPIView(APIView):
 
 # Cart
 class AddToCartAPIView(CreateAPIView):
-    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsOwnerOrAdmin]
 
     def post(self, request):
         user = request.user

@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from rest_framework import generics
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.generics import (CreateAPIView, RetrieveUpdateDestroyAPIView, ListAPIView)
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly,IsAdminUser
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import ValidationError, NotFound
@@ -19,7 +19,7 @@ from rest_framework.pagination import PageNumberPagination
 # Category
 class CreateCategoryAPIView(CreateAPIView):
     serializer_class = CategorySerializer
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
     queryset = Category.objects.all()
@@ -46,7 +46,7 @@ class CategoryListAPIView(generics.ListAPIView):
         return queryset
 
 class CategoryAPIView(RetrieveUpdateDestroyAPIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminOrReadOnly]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
     queryset = Category.objects.all()
@@ -88,7 +88,7 @@ class CategoryAPIView(RetrieveUpdateDestroyAPIView):
 class CreateSubcategoryAPIView(CreateAPIView):
     queryset = Subcategory.objects.all()
     serializer_class = SubcategorySerializer
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
 
@@ -110,7 +110,7 @@ class SubcategoryListAPIView(generics.ListAPIView):
         return queryset
 
 class SubcategoryAPIView(RetrieveUpdateDestroyAPIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminOrReadOnly]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
     queryset = Subcategory.objects.all()
@@ -161,6 +161,7 @@ class CreateProductAPIView(CreateAPIView):
     serializer_class = ProductSerializer
     authentication_classes = [JWTAuthentication]
     parser_classes = [MultiPartParser]
+    permission_classes = [IsAdminUser]
 
     def create(self, request, *args, **kwargs):
         language = request.data.get('language', 'en')
@@ -217,7 +218,7 @@ class ProductListAPIView(ListAPIView):
 class ProductAPIView(RetrieveUpdateDestroyAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    # permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminOrReadOnly]
     parser_classes = [MultiPartParser, JSONParser]
     lookup_url_kwarg = 'product_id'
 
@@ -255,7 +256,7 @@ class ProductAPIView(RetrieveUpdateDestroyAPIView):
 
 # Comments
 class CreateCommentAPIView(generics.CreateAPIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
     serializer_class = CommentSerializer
 
@@ -281,7 +282,7 @@ class CommentListAPIView(ListAPIView):
 class CommentAPIView(RetrieveUpdateDestroyAPIView):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    # permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [IsOwnerOrAdmin]
     parser_classes = [JSONParser]
     lookup_url_kwarg = 'comment_id'
 
@@ -318,7 +319,7 @@ class CommentAPIView(RetrieveUpdateDestroyAPIView):
 class CreateRatingAPIView(generics.CreateAPIView):
     queryset = Rating.objects.all()
     serializer_class = RatingCreateSerializer
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
 
     def create(self, request, *args, **kwargs):
@@ -358,7 +359,7 @@ class RatingListAPIView(ListAPIView):
         return queryset
 
 class RatingAPIView(RetrieveUpdateDestroyAPIView):
-    # permission_classes = [IsAuthenticatedOrReadOnly]
+    ermission_classes = [IsOwnerOrAdmin]
     authentication_classes = [JWTAuthentication]
     queryset = Rating.objects.all()
     serializer_class = RatingUpdateSerializer

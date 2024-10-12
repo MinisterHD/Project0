@@ -12,6 +12,7 @@ from rest_framework.parsers import JSONParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import ValidationError
 import logging
+from .permissions import IsOwnerOrAdmin
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import PermissionDenied
@@ -75,7 +76,7 @@ class LoginView(GenericAPIView):
 
 class LogoutView(APIView):
     authentication_classes = [JWTAuthentication]
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     parser_classes = [JSONParser]
 
     def get(self, request):
@@ -91,7 +92,7 @@ class LogoutView(APIView):
 class UserView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsOwnerOrAdmin]
     parser_classes = [JSONParser]
 
     def get_object(self):
@@ -136,6 +137,7 @@ class UserPagination(PageNumberPagination):
 
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
+    permission_classes = [IsAdminUser]
     serializer_class = UserSerializer
     pagination_class = UserPagination
     filter_backends = [filters.SearchFilter]
