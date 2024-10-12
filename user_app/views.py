@@ -87,7 +87,6 @@ class LogoutView(APIView):
             return Response(data={'message': 'An error occurred during logout.', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 #UserManagement
-
 class UserView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -129,7 +128,7 @@ class UserListView(generics.ListAPIView):
     pagination_class = UserPagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['is_staff'] 
-    
+
     def get_queryset(self):
         queryset = super().get_queryset()
         is_staff = self.request.query_params.get('is_staff', None)

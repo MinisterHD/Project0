@@ -5,9 +5,8 @@ from .serializers import *
 from .permissions import *
 from django.http import Http404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import status
+from rest_framework import status,generics
 from rest_framework.response import Response
-from rest_framework import generics
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.generics import (CreateAPIView,RetrieveUpdateDestroyAPIView,
                                         ListAPIView,CreateAPIView)
@@ -18,18 +17,24 @@ from rest_framework.exceptions import ValidationError,NotFound
 from parler.utils.context import activate
 from parler.utils.context import switch_language
 from rest_framework.pagination import PageNumberPagination
-
+from django.db import IntegrityError, transaction
 #Category
+
 class CreateCategoryAPIView(CreateAPIView):
-  serializer_class = CategorySerializer
-  #permission_classes = [IsAuthenticated]
-  authentication_classes = [JWTAuthentication]
-  parser_classes = [JSONParser]
-  queryset = Category.objects.all()
-  def create(self, request, *args, **kwargs):
+    serializer_class = CategorySerializer
+    # permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+    parser_classes = [JSONParser]
+    queryset = Category.objects.all()
+
+    def create(self, request, *args, **kwargs):
         language = request.data.get('language', 'en')
         activate(language)
-        return super().create(request, *args, **kwargs)
+        try:
+            with transaction.atomic():
+                return super().create(request, *args, **kwargs)
+        except IntegrityError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
 class CategoryListAPIView(generics.ListAPIView):
     queryset = Category.objects.all()
@@ -94,15 +99,20 @@ class CategoryAPIView(RetrieveUpdateDestroyAPIView):
 
 #SubCategory
 class CreateSubcategoryAPIView(CreateAPIView):
-  queryset = Subcategory.objects.all()
-  serializer_class = SubcategorySerializer
-  #permission_classes = [IsAuthenticated]
-  authentication_classes = [JWTAuthentication]
-  parser_classes = [JSONParser]
-  def create(self, request, *args, **kwargs):
+    serializer_class = SubcategorySerializer
+    # permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+    parser_classes = [JSONParser]
+    queryset = Subcategory.objects.all()
+
+    def create(self, request, *args, **kwargs):
         language = request.data.get('language', 'en')
         activate(language)
-        return super().create(request, *args, **kwargs)
+        try:
+            with transaction.atomic():
+                return super().create(request, *args, **kwargs)
+        except IntegrityError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
   
 class SubcategoryListAPIView(generics.ListAPIView):
     queryset = Subcategory.objects.all()
@@ -156,7 +166,6 @@ class SubcategoryAPIView(RetrieveUpdateDestroyAPIView):
         return Response(serializer.data)
 
 #Products
-
 class ProductPagination(PageNumberPagination):
     page_size_query_param = 'page_size'  
 
@@ -170,18 +179,20 @@ class ProductPagination(PageNumberPagination):
         })
 
 class CreateProductAPIView(CreateAPIView):
-    queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    # permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
-    parser_classes = [MultiPartParser]  
+    parser_classes = [JSONParser]
+    queryset = Product.objects.all()
 
     def create(self, request, *args, **kwargs):
         language = request.data.get('language', 'en')
         activate(language)
-        response = super().create(request, *args, **kwargs)
-
-        
-        return response
+        try:
+            with transaction.atomic():
+                return super().create(request, *args, **kwargs)
+        except IntegrityError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
  
 class ProductListAPIView(ListAPIView):
     queryset = Product.objects.all()
