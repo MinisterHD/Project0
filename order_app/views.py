@@ -1,5 +1,5 @@
 import logging
-from rest_framework import status, filters, permissions,generics
+from rest_framework import status, filters, permissions, generics
 from rest_framework.generics import CreateAPIView, RetrieveUpdateDestroyAPIView, ListAPIView
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
@@ -13,74 +13,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
 from rest_framework.views import APIView
 from .permissions import IsOwnerOrAdmin
+from django.db import IntegrityError, transaction
+
 logger = logging.getLogger(__name__)
-
-# Orders
-
-class CreateOrderAPIView(CreateAPIView):
-    # permission_classes = [permissions.IsAuthenticated]
-    authentication_classes = [JWTAuthentication]
-    queryset = Order.objects.all()
-    serializer_class = OrderSerializer
-
-    def perform_create(self, serializer):
-        order = serializer.save(user=self.request.user)
-        return order
-
-    def create(self, request, *args, **kwargs):
-        order_items_data = request.data.get('order_items', [])
-
-        if not order_items_data:
-            return Response({"detail": "No items in the order."}, status=status.HTTP_400_BAD_REQUEST)
-
-        total_price = 0  
-
-
-        delivery_status = request.data.get('delivery_status', 'pending')
-
-        order = Order(
-            user=request.user, 
-            delivery_address=request.data.get('delivery_address'),
-            delivery_status=delivery_status  
-        )
-        order_items = []  
-
-        for item_data in order_items_data:
-            try:
-                product_id = item_data['product'] 
-                quantity = item_data['quantity']  
-
-                if product_id is None or quantity is None:
-                    return Response({"detail": "Product ID and quantity must be provided."}, status=status.HTTP_400_BAD_REQUEST)
-
-                product = Product.objects.get(id=product_id)
-                if product.stock < quantity:
-                    return Response({"detail": f"Not enough stock for {product.name}."}, status=status.HTTP_400_BAD_REQUEST)
-
-                total_price += product.price * quantity
-
-                order_item = OrderItem(order=order, product=product, quantity=quantity)
-                order_items.append(order_item)
-
-                product.stock -= quantity
-                product.sales_count += quantity 
-                product.save()
-
-            except Product.DoesNotExist:
-                return Response({"detail": f"Product with ID {product_id} does not exist."}, status=status.HTTP_404_NOT_FOUND)
-            except KeyError as e:
-                return Response({"detail": f"Missing field: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
-
-        order.total_price = total_price
-        order.save()
-
-        OrderItem.objects.bulk_create(order_items)
-
-        return Response({"detail": "Order created successfully.", "order_id": order.id}, status=status.HTTP_201_CREATED)
 
 class OrderAPIView(RetrieveUpdateDestroyAPIView):
     authentication_classes = [JWTAuthentication]
-    #permission_classes = [permissions.IsAuthenticated]
+    # permission_classes = [permissions.IsAuthenticated]
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     parser_classes = [JSONParser]
@@ -108,27 +47,90 @@ class OrderAPIView(RetrieveUpdateDestroyAPIView):
             return Response({"detail": e.detail}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error(f"Update failed: {str(e)}")
-            return Response({"detail": f"Unable to update order: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def destroy(self, request, *args, **kwargs):
         try:
             return super().destroy(request, *args, **kwargs)
         except Exception as e:
             logger.error(f"Delete failed: {e}")
-            return Response({"detail": "Unable to delete order"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     def get_queryset(self):
         return super().get_queryset().prefetch_related('order_items__product')
-        
+
+class CreateOrderAPIView(CreateAPIView):
+    # permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+
+    def perform_create(self, serializer):
+        order = serializer.save(user=self.request.user)
+        return order
+
+    def create(self, request, *args, **kwargs):
+        order_items_data = request.data.get('order_items', [])
+
+        if not order_items_data:
+            return Response({"detail": "No items in the order."}, status=status.HTTP_400_BAD_REQUEST)
+
+        total_price = 0  
+        delivery_status = request.data.get('delivery_status', 'pending')
+
+        order = Order(
+            user=request.user, 
+            delivery_address=request.data.get('delivery_address'),
+            delivery_status=delivery_status  
+        )
+        order_items = []  
+
+        try:
+            with transaction.atomic():
+                for item_data in order_items_data:
+                    product_id = item_data.get('product') 
+                    quantity = item_data.get('quantity')  
+
+                    if product_id is None or quantity is None:
+                        return Response({"detail": "Product ID and quantity must be provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+                    product = Product.objects.get(id=product_id)
+                    if product.stock < quantity:
+                        return Response({"detail": f"Not enough stock for {product.name}."}, status=status.HTTP_400_BAD_REQUEST)
+
+                    total_price += product.price * quantity
+
+                    order_item = OrderItem(order=order, product=product, quantity=quantity)
+                    order_items.append(order_item)
+
+                    product.stock -= quantity
+                    product.sales_count += quantity 
+                    product.save()
+
+                order.total_price = total_price
+                order.save()
+                OrderItem.objects.bulk_create(order_items)
+
+                return Response({"detail": "Order created successfully.", "order_id": order.id}, status=status.HTTP_201_CREATED)
+        except Product.DoesNotExist:
+            return Response({"detail": f"Product with ID {product_id} does not exist."}, status=status.HTTP_404_NOT_FOUND)
+        except KeyError as e:
+            return Response({"detail": f"Missing field: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        except IntegrityError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Order creation failed: {str(e)}")
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class OrderListAPIView(ListAPIView):
     authentication_classes = [JWTAuthentication] 
-    #permission_classes = [permissions.IsAuthenticated]  
+    # permission_classes = [permissions.IsAuthenticated]  
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['delivery_status', 'user', 'order_date'] 
     ordering_fields = ['delivery_date', 'order_date']
     ordering = ['-order_date']
-
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -162,11 +164,12 @@ class CancelOrderAPIView(APIView):
         except Order.DoesNotExist:
             return Response({"detail": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({"detail": f"Error cancelling order: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"Error cancelling order: {str(e)}")
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-#Cart
+# Cart
 class AddToCartAPIView(CreateAPIView):
-    #permission_classes = [permissions.IsAuthenticated]
+    # permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         user = request.user
@@ -183,16 +186,23 @@ class AddToCartAPIView(CreateAPIView):
             logger.warning(f"User {user.id} tried to add a non-existent product with ID {product_id}.")
             return Response({"detail": "Product not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        cart, created = Cart.objects.get_or_create(user=user)
-        cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product)
-        cart_item.quantity += quantity
-        cart_item.save()
-        cart_serializer = CartSerializer(cart)
-        logger.info(f"User {user.id} added product {product.id} to cart. Quantity: {cart_item.quantity}.")
-        return Response({
-            "detail": "Product added to cart.",
-            "cart":cart_serializer.data
-        }, status=status.HTTP_201_CREATED)
+        try:
+            with transaction.atomic():
+                cart, created = Cart.objects.get_or_create(user=user)
+                cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product)
+                cart_item.quantity += quantity
+                cart_item.save()
+                cart_serializer = CartSerializer(cart)
+                logger.info(f"User {user.id} added product {product.id} to cart. Quantity: {cart_item.quantity}.")
+                return Response({
+                    "detail": "Product added to cart.",
+                    "cart": cart_serializer.data
+                }, status=status.HTTP_201_CREATED)
+        except IntegrityError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Error adding to cart: {str(e)}")
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class CartItemAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CartItemSerializer
@@ -209,54 +219,68 @@ class CartItemAPIView(generics.RetrieveUpdateDestroyAPIView):
             return None
 
     def get(self, request, user_id, product_id):
-        cart_item = self.get_object()
-        if cart_item:
-            cart_serializer = CartSerializer(cart_item.cart)
-            return Response(cart_serializer.data, status=status.HTTP_200_OK)
-        return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            cart_item = self.get_object()
+            if cart_item:
+                cart_serializer = CartSerializer(cart_item.cart)
+                return Response(cart_serializer.data, status=status.HTTP_200_OK)
+            return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error retrieving cart item: {str(e)}")
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def put(self, request, user_id, product_id):
-        cart_item = self.get_object()
-        if cart_item:
-            quantity = request.data.get('quantity')
-            if quantity is None or quantity <= 0:
-                return Response({"detail": "Invalid quantity."}, status=status.HTTP_400_BAD_REQUEST)
-            cart_item.quantity = quantity
-            cart_item.save()
-            cart_serializer = CartSerializer(cart_item.cart)
-            return Response({
-                "detail": "Cart item updated.",
-                "cart": cart_serializer.data
-            }, status=status.HTTP_200_OK)
-        return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            cart_item = self.get_object()
+            if cart_item:
+                quantity = request.data.get('quantity')
+                if quantity is None or quantity <= 0:
+                    return Response({"detail": "Invalid quantity."}, status=status.HTTP_400_BAD_REQUEST)
+                cart_item.quantity = quantity
+                cart_item.save()
+                cart_serializer = CartSerializer(cart_item.cart)
+                return Response({
+                    "detail": "Cart item updated.",
+                    "cart": cart_serializer.data
+                }, status=status.HTTP_200_OK)
+            return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error updating cart item: {str(e)}")
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request, user_id, product_id):
-        cart_item = self.get_object()
-        if cart_item:
-            cart = cart_item.cart
-            cart_item.delete()
-            cart_serializer = CartSerializer(cart)
-            return Response({
-                "detail": "Product removed from cart.",
-                "cart": cart_serializer.data
-            }, status=status.HTTP_204_NO_CONTENT)
-        return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
-    
+        try:
+            cart_item = self.get_object()
+            if cart_item:
+                cart = cart_item.cart
+                cart_item.delete()
+                cart_serializer = CartSerializer(cart)
+                return Response({
+                    "detail": "Product removed from cart.",
+                    "cart": cart_serializer.data
+                }, status=status.HTTP_204_NO_CONTENT)
+            return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error deleting cart item: {str(e)}")
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class UserCartAPIView(generics.RetrieveAPIView):
     serializer_class = CartSerializer
     permission_classes = [IsOwnerOrAdmin]
 
     def get_object(self):
-        user_id = self.kwargs['user_id']
         try:
-            user = User.objects.get(id=user_id)
-            return Cart.objects.get(user=user)
-        except (User.DoesNotExist, Cart.DoesNotExist):
+            return Cart.objects.get(user=self.request.user)
+        except Cart.DoesNotExist:
             return None
 
-    def get(self, request, user_id):
-        cart = self.get_object()
-        if cart:
-            cart_serializer = CartSerializer(cart)
-            return Response(cart_serializer.data, status=status.HTTP_200_OK)
-        return Response({"detail": "Cart not found."}, status=status.HTTP_404_NOT_FOUND)    
+    def get(self, request):
+        try:
+            cart = self.get_object()
+            if cart:
+                cart_serializer = CartSerializer(cart)
+                return Response(cart_serializer.data, status=status.HTTP_200_OK)
+            return Response({"detail": "Cart not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error retrieving user cart: {str(e)}")
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
