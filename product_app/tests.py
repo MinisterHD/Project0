@@ -227,6 +227,7 @@ class RatingTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Rating.objects.count(), 0)
 
+
 class TopSellerTests(APITestCase):
     def setUp(self):
         self.category = Category.objects.create(slugname='electronics')

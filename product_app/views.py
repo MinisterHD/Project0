@@ -17,6 +17,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import ValidationError,NotFound
 from parler.utils.context import activate
 from parler.utils.context import switch_language
+from rest_framework.pagination import PageNumberPagination
 
 #Category
 class CreateCategoryAPIView(CreateAPIView):
@@ -155,6 +156,19 @@ class SubcategoryAPIView(RetrieveUpdateDestroyAPIView):
         return Response(serializer.data)
 
 #Products
+
+class ProductPagination(PageNumberPagination):
+    page_size_query_param = 'page_size'  
+
+    def get_paginated_response(self, data):
+        return Response({
+            'count': self.page.paginator.count,
+            'total_pages': self.page.paginator.num_pages,
+            'next': self.get_next_link(),
+            'previous': self.get_previous_link(),
+            'results': data
+        })
+
 class CreateProductAPIView(CreateAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
@@ -173,8 +187,8 @@ class ProductListAPIView(ListAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter] 
-
     search_fields = ['name']
+    pagination_class = ProductPagination
 
     def get_queryset(self):
         queryset = super().get_queryset()

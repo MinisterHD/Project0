@@ -129,10 +129,14 @@ class UserListView(generics.ListAPIView):
     pagination_class = UserPagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['is_staff'] 
-
+    
     def get_queryset(self):
         queryset = super().get_queryset()
         is_staff = self.request.query_params.get('is_staff', None)
         if is_staff is not None:
-            queryset = queryset.filter(is_staff=is_staff)
+            is_staff = is_staff.lower()
+            if is_staff == 'true':
+                queryset = queryset.filter(is_staff=True)
+            elif is_staff == 'false':
+                queryset = queryset.filter(is_staff=False)
         return queryset
