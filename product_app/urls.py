@@ -7,6 +7,8 @@ from .views import (
     CreateRatingAPIView, RatingAPIView,RatingListAPIView,TopSellerAPIView
 )
 
+from .views import UpdateProductStockView
+
 urlpatterns = [
     # Category
     path('categories/create/', CreateCategoryAPIView.as_view(), name='create-category'),
@@ -35,6 +37,12 @@ urlpatterns = [
 
     #TopSellerList
     path('products/top-seller/', TopSellerAPIView.as_view(), name='top-seller'),
+
+
+    #test
+    path('update-product-stock/<int:product_id>/', UpdateProductStockView.as_view(), name='update_product_stock'),
+ 
 ]
+
 
 

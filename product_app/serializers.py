@@ -183,3 +183,15 @@ class RatingSerializer(serializers.ModelSerializer):
         model = Rating
         fields = '__all__'  
 
+
+
+
+
+#Test
+from rest_framework import serializers
+from product_app.models import Product
+
+class ProductStockUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = ['stock']

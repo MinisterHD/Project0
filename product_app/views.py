@@ -395,3 +395,33 @@ class RatingAPIView(RetrieveUpdateDestroyAPIView):
 class TopSellerAPIView(ListAPIView):
     serializer_class = ProductSerializer
     queryset = Product.objects.order_by('-sales_count')[:10]
+
+
+
+#test
+# views.py
+
+# views.py
+
+# views.py
+
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.views import View
+from .models import Product
+
+class UpdateProductStockView(View):
+    def post(self, request, product_id):
+        product = get_object_or_404(Product, id=product_id)
+        product.stock += 1
+        product.save()
+        product.notify_users()
+        return JsonResponse({"status": "success", "message": "Product stock updated and users notified."})
+
+    # Temporarily add GET method for testing
+    def get(self, request, product_id):
+        product = get_object_or_404(Product, id=product_id)
+        product.stock += 1
+        product.save()
+        product.notify_users()
+        return JsonResponse({"status": "success", "message": "Product stock updated and users notified."})

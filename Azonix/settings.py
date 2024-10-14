@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-2a@+-nld=!m#ek)@cj$i6%v99f=6=+(ke(73rhcnh5jvcs@c%m
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'channels',
     'parler',
     'user_app',
     'product_app.apps.ProductAppConfig',
@@ -83,7 +84,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'Azonix.wsgi.application'
-
+ASGI_APPLICATION = 'Azonix.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -180,4 +181,27 @@ PARLER_LANGUAGES = {
         'fallback': 'en',  
         'hide_untranslated': False, 
     }
+}
+
+
+
+
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_postgres.core.PostgresChannelLayer',
+        'CONFIG': {
+            'hosts': [('localhost', 5432)],
+            'database': 'azonix',
+            'user': 'admin-azonix',
+            'password': 'azonix',
+        },
+    },
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Azonix API',
+    'DESCRIPTION': 'API documentation for Azonix project',
+    'VERSION': '1.0.0',
+    
 }
