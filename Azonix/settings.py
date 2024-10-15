@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-2a@+-nld=!m#ek)@cj$i6%v99f=6=+(ke(73rhcnh5jvcs@c%m
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
 
 
 # Application definition
@@ -186,15 +186,12 @@ PARLER_LANGUAGES = {
 
 
 
-
+ALLOWED_HOSTS = ['*']
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels_postgres.core.PostgresChannelLayer',
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [('localhost', 5432)],
-            'database': 'azonix',
-            'user': 'admin-azonix',
-            'password': 'azonix',
+            "hosts": [('127.0.0.1', 6379)],
         },
     },
 }
@@ -204,4 +201,31 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API documentation for Azonix project',
     'VERSION': '1.0.0',
     
+}
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': r'C:\Projects\Azonix\logfile.log', 
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file', 'console'], 
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'product_app': {  
+            'handlers': ['file', 'console'], 
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
 }

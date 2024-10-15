@@ -65,19 +65,7 @@ class Product(TranslatableModel):
 
     def __str__(self):
         return self.name
-    def notify_users(self):
-        channel_layer = get_channel_layer()
-        WishlistItem = apps.get_model('order_app', 'WishlistItem')
-        wishlist_items = WishlistItem.objects.filter(product=self)
-        for item in wishlist_items:
-            user = item.wishlist.user
-            async_to_sync(channel_layer.group_send)(
-                f"user_{user.id}",
-                {
-                    'type': 'send_notification',
-                    'message': f'The product {self.name} is now back in stock!'
-                }
-            )
+
 
 class Comment(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='comments',null=False,blank=False)

@@ -401,6 +401,8 @@ class AddToWishlistAPIView(APIView):
                 return Response({"detail": "Product is already in the wishlist."}, status=status.HTTP_200_OK)
         except Product.DoesNotExist:
             return Response({"detail": "Product not found."}, status=status.HTTP_404_NOT_FOUND)
+        except WishlistItem.MultipleObjectsReturned:
+            return Response({"detail": "Product is already in the wishlist."}, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Error adding product {product_id} to wishlist for user {user_id}: {str(e)}")
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
