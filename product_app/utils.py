@@ -1,5 +1,6 @@
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 from order_app.models import WishlistItem
 import logging
 
@@ -7,15 +8,22 @@ logger = logging.getLogger(__name__)
 
 def notify_users(product):
     logger.info(f"Notifying users about product availability: {product.name}")
-    channel_layer = get_channel_layer()
     wishlist_items = WishlistItem.objects.filter(product=product)
+    notified_users = set()  # Set to keep track of notified users
+
     for item in wishlist_items:
         user = item.wishlist.user
-        logger.info(f"Sending notification to user {user.id}")
-        async_to_sync(channel_layer.group_send)(
-            f"user_{user.id}",
-            {
-                "type": "send_notification",
-                "message": f"The product {product.name} is now available!"
-            }
-        )
+        if user.id not in notified_users:
+            logger.info(f"Sending email to user {user.id}")
+            # Send email notification
+            subject = f"Product {product.name} is now available!"
+            html_message = render_to_string('email/product_available.html', {'product': product, 'user': user})
+            plain_message = strip_tags(html_message)
+            from_email = 'webmaster@example.com'  # Replace with your from email
+            to = user.email
+
+            logger.info("Calling send_mail function")
+            send_mail(subject, plain_message, from_email, [to], html_message=html_message)
+            logger.info("send_mail function called successfully")
+
+            notified_users.add(user.id)  # Add user to the set
