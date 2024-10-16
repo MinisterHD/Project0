@@ -187,7 +187,7 @@ PARLER_LANGUAGES = {
 
 
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['*']
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
@@ -224,7 +224,7 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
-        'product_app': {  
+        'chat_app': {  
             'handlers': ['file', 'console'], 
             'level': 'DEBUG',
             'propagate': True,
