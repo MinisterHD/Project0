@@ -313,12 +313,13 @@ class UserCartAPIView(generics.RetrieveAPIView):
     permission_classes = [IsOwnerOrAdmin]
 
     def get_object(self):
+        user_id = self.kwargs.get('user_id')
         try:
-            return Cart.objects.get(user=self.request.user)
+            return Cart.objects.get(user_id=user_id)
         except Cart.DoesNotExist:
             return None
 
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         try:
             cart = self.get_object()
             if cart:

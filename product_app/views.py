@@ -198,9 +198,11 @@ class ProductListAPIView(ListAPIView):
 
         min_price = params.get('minPrice')
         max_price = params.get('maxPrice')
-        if min_price:
+        if min_price and max_price:
+            queryset = queryset.filter(price__gte=float(min_price), price__lte=float(max_price))
+        elif min_price:
             queryset = queryset.filter(price__gte=float(min_price))
-        if max_price:
+        elif max_price:
             queryset = queryset.filter(price__lte=float(max_price))
 
         sort_field = params.get('sort', 'category')

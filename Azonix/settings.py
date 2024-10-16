@@ -203,6 +203,7 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     
 }
+'''
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -230,6 +231,6 @@ LOGGING = {
         },
     },
 }
-
+'''
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
