@@ -199,11 +199,11 @@ class ProductListAPIView(ListAPIView):
         min_price = params.get('minPrice')
         max_price = params.get('maxPrice')
         if min_price and max_price:
-            queryset = queryset.filter(price__gte=float(min_price), price__lte=float(max_price))
+            queryset = queryset.filter(price_after_discount__gte=float(min_price), price_after_discount__lte=float(max_price))
         elif min_price:
-            queryset = queryset.filter(price__gte=float(min_price))
+            queryset = queryset.filter(price_after_discount__gte=float(min_price))
         elif max_price:
-            queryset = queryset.filter(price__lte=float(max_price))
+            queryset = queryset.filter(price_after_discount__lte=float(max_price))
 
         sort_field = params.get('sort', 'category')
         if sort_field:
@@ -211,9 +211,9 @@ class ProductListAPIView(ListAPIView):
 
         sort_order = params.get('sort_order', 'asc')
         if sort_order == 'desc':
-            queryset = queryset.order_by('-price')
+            queryset = queryset.order_by('-price_after_discount')
         else:
-            queryset = queryset.order_by('price')
+            queryset = queryset.order_by('price_after_discount')
 
         return queryset
 
