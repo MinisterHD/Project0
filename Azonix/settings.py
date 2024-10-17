@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'channels',
     'parler',
     'user_app',
+    'django_celery_beat',
     'product_app.apps.ProductAppConfig',
     'order_app',
     'chat_app',
@@ -234,3 +235,13 @@ LOGGING = {
 '''
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
+CELERY_BROKER_URL = 'redis://localhost:6379'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+CELERY_BEAT_SCHEDULE = {
+    'update_delivery_status': {
+        'task': 'order_app.tasks.update_delivery_status',
+        'schedule': 86400,  # 24 hours in seconds
+    },
+}

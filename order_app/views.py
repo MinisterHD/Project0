@@ -16,6 +16,7 @@ from .permissions import IsOwnerOrAdmin,IsAdminOrReadOnly
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
+from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
@@ -60,7 +61,7 @@ class UserOrdersAPIView(ListAPIView):
 
 class OrderAPIView(RetrieveUpdateDestroyAPIView):
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticatedOrReadOnly,IsAdminOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminOrReadOnly]
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
     parser_classes = [JSONParser]
@@ -75,9 +76,14 @@ class OrderAPIView(RetrieveUpdateDestroyAPIView):
         try:
             partial = kwargs.pop('partial', False)
             instance = self.get_object()
+            previous_status = instance.delivery_status
             serializer = self.get_serializer(instance, data=request.data, partial=partial)
             serializer.is_valid(raise_exception=True)
             self.perform_update(serializer)
+
+            if previous_status == 'pending' and instance.delivery_status == 'shipped':
+                instance.shipped_at = timezone.now()
+                instance.save()
 
             if getattr(instance, '_prefetched_objects_cache', None):
                 instance._prefetched_objects_cache = {}
@@ -125,6 +131,7 @@ class CreateOrderAPIView(CreateAPIView):
             delivery_status=delivery_status  
         )
         order_items = []  
+
 
         try:
             with transaction.atomic():
