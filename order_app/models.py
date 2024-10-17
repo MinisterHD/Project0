@@ -16,7 +16,7 @@ class Order(models.Model):
             ,blank=False,null=False)
     total_price = models.PositiveIntegerField(default=0)
     order_date = models.DateTimeField(auto_now_add=True)
-    delivery_date = models.DateTimeField(auto_now_add=True, null=True)
+    delivery_date = models.DateTimeField(null=True)
     shipped_at = models.DateTimeField(null=True, blank=True)  
     products = models.ManyToManyField(Product)
     created_at = models.DateTimeField(auto_now_add=True)

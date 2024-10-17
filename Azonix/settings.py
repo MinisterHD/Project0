@@ -242,6 +242,6 @@ CELERY_RESULT_BACKEND = 'redis://localhost:6379'
 CELERY_BEAT_SCHEDULE = {
     'update_delivery_status': {
         'task': 'order_app.tasks.update_delivery_status',
-        'schedule': 86400,  # 24 hours in seconds
+        'schedule': 86400, 
     },
 }
