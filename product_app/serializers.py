@@ -163,6 +163,7 @@ class ProductSerializer(TranslatableModelSerializer):
 
         instance.save()
         return instance
+    
 class ProductDetailSerializer(TranslatableModelSerializer):
     translations = TranslatedFieldsField(shared_model=Product)
     class Meta:

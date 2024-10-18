@@ -91,7 +91,10 @@ class CartSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'created_at', 'items'] 
 
 
+
 class WishlistItemSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)  # Use ProductSerializer to include product details
+
     class Meta:
         model = WishlistItem
         fields = ['id', 'product', 'added_at']
