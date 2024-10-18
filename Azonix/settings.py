@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'channels',
-    'corsheaders'
+    'corsheaders',
     'parler',
     'user_app',
     'django_celery_beat',
