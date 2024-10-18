@@ -39,11 +39,15 @@ class ProductSerializer(TranslatableModelSerializer):
 
     slugname = serializers.CharField(required=False)
     stock = serializers.IntegerField(required=False)
-    price = serializers.IntegerField( required=False)
+    price = serializers.IntegerField(required=False)
 
     translations = serializers.SerializerMethodField(read_only=True)
-    category_name = serializers.CharField(source='category.name', read_only=True)
-    subcategory_name = serializers.CharField(source='subcategory.name', read_only=True)
+    category_name_en = serializers.SerializerMethodField(read_only=True)
+    category_name_fa = serializers.SerializerMethodField(read_only=True)
+    category_slug = serializers.SerializerMethodField(read_only=True)
+    subcategory_name_en = serializers.SerializerMethodField(read_only=True)
+    subcategory_name_fa = serializers.SerializerMethodField(read_only=True)
+    subcategory_slug = serializers.SerializerMethodField(read_only=True)
     category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), required=False)
 
     class Meta:
@@ -62,6 +66,24 @@ class ProductSerializer(TranslatableModelSerializer):
                 'description': obj.safe_translation_getter('description', language_code='fa')
             },
         }
+
+    def get_category_name_en(self, obj):
+        return obj.category.safe_translation_getter('name', language_code='en') if obj.category else None
+
+    def get_category_name_fa(self, obj):
+        return obj.category.safe_translation_getter('name', language_code='fa') if obj.category else None
+
+    def get_category_slug(self, obj):
+        return obj.category.slugname if obj.category else None
+
+    def get_subcategory_name_en(self, obj):
+        return obj.subcategory.safe_translation_getter('name', language_code='en') if obj.subcategory else None
+
+    def get_subcategory_name_fa(self, obj):
+        return obj.subcategory.safe_translation_getter('name', language_code='fa') if obj.subcategory else None
+
+    def get_subcategory_slug(self, obj):
+        return obj.subcategory.slugname if obj.subcategory else None
 
     def create(self, validated_data):
         translations_en_name = validated_data.pop('translations_en_name', None)
@@ -124,7 +146,6 @@ class ProductSerializer(TranslatableModelSerializer):
                 instance.description = translation['description']
             instance.save_translations()
 
-
         images = validated_data.get('images', None)
         if images and isinstance(images, list):
             if len(images) > 0:
@@ -136,15 +157,12 @@ class ProductSerializer(TranslatableModelSerializer):
             if len(images) > 3:
                 instance.image4 = images[3]
 
-
         for attr, value in validated_data.items():
             if hasattr(instance, attr):  
                 setattr(instance, attr, value)
 
-      
         instance.save()
         return instance
-    
 class ProductDetailSerializer(TranslatableModelSerializer):
     translations = TranslatedFieldsField(shared_model=Product)
     class Meta:

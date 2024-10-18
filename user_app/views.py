@@ -1,26 +1,22 @@
 from .models import *
 from .serializers import *
 from django.contrib.auth.hashers import make_password
-from rest_framework import generics, filters
+from rest_framework import viewsets, filters, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser
-from rest_framework.generics import CreateAPIView, GenericAPIView
-from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.parsers import JSONParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.exceptions import ValidationError
-import logging
-from .permissions import IsOwnerOrAdmin
+from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils.translation import gettext_lazy as _
-from rest_framework.exceptions import PermissionDenied
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.exceptions import NotFound
+import logging
+from .permissions import IsOwnerOrAdmin
+from rest_framework.generics import CreateAPIView, GenericAPIView  # Add these imports
 
 logger = logging.getLogger(__name__)
-
 # Auth
 class SignUpView(CreateAPIView):
     serializer_class = UserSignUpSerializer
@@ -88,12 +84,29 @@ class LogoutView(APIView):
             logger.error(f"Error during logout: {str(e)}")
             return Response(data={'message': 'An error occurred during logout.', 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# Pagination
+class UserPagination(PageNumberPagination):
+    page_size_query_param = 'page_size'
+
+    def get_paginated_response(self, data):
+        return Response({
+            'count': self.page.paginator.count,
+            'total_pages': self.page.paginator.num_pages,
+            'next': self.get_next_link(),
+            'previous': self.get_previous_link(),
+            'results': data
+        })
+
 # UserManagement
-class UserView(generics.RetrieveUpdateDestroyAPIView):
+class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsOwnerOrAdmin]
     parser_classes = [JSONParser]
+    authentication_classes = [JWTAuthentication]
+    pagination_class = UserPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['is_staff']
 
     def get_object(self):
         try:
@@ -123,37 +136,19 @@ class UserView(generics.RetrieveUpdateDestroyAPIView):
             logger.error(f"Error updating user: {str(e)}")
             return Response({'errors': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class UserPagination(PageNumberPagination):
-    page_size_query_param = 'page_size'
-
-    def get_paginated_response(self, data):
-        return Response({
-            'count': self.page.paginator.count,
-            'total_pages': self.page.paginator.num_pages,
-            'next': self.get_next_link(),
-            'previous': self.get_previous_link(),
-            'results': data
-        })
-
-class UserListView(generics.ListAPIView):
-    queryset = User.objects.all()
-    permission_classes = [IsAdminUser]
-    serializer_class = UserSerializer
-    pagination_class = UserPagination
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['is_staff']
-
-    def get_queryset(self):
-        try:
-            queryset = super().get_queryset()
-            is_staff = self.request.query_params.get('is_staff', None)
-            if is_staff is not None:
-                is_staff = is_staff.lower()
-                if is_staff == 'true':
-                    queryset = queryset.filter(is_staff=True)
-                elif is_staff == 'false':
-                    queryset = queryset.filter(is_staff=False)
-            return queryset
-        except Exception as e:
-            logger.error(f"Error filtering user list: {str(e)}")
-            return queryset.none()
+    @action(detail=False, methods=['get'], permission_classes=[IsAdminUser])
+    def list_users(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        is_staff = request.query_params.get('is_staff', None)
+        if is_staff is not None:
+            is_staff = is_staff.lower()
+            if is_staff == 'true':
+                queryset = queryset.filter(is_staff=True)
+            elif is_staff == 'false':
+                queryset = queryset.filter(is_staff=False)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
