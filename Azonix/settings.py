@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'channels',
+    'corsheaders'
     'parler',
     'user_app',
     'django_celery_beat',
@@ -58,6 +59,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -245,3 +247,13 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': 86400, 
     },
 }
+# Allow all origins (not recommended for production)
+CORS_ALLOW_ALL_ORIGINS = True
+
+# OR specify allowed origins (recommended for production)
+#CORS_ALLOWED_ORIGINS = [
+  #  "http://localhost:3000",  # Add your frontend URL here
+   # "https://your-frontend-domain.com",
+#]
+
+CORS_ALLOW_CREDENTIALS = True

@@ -93,7 +93,7 @@ class CartSerializer(serializers.ModelSerializer):
 
 
 class WishlistItemSerializer(serializers.ModelSerializer):
-    product = ProductSerializer(read_only=True)  # Use ProductSerializer to include product details
+    product = ProductSerializer(read_only=True)  
 
     class Meta:
         model = WishlistItem
