@@ -1,19 +1,22 @@
-from django.urls import path
+from django.urls import path, include
 from .views import (
-    CreateCategoryAPIView, CategoryListAPIView, CategoryAPIView,
+    CategoryViewSet,
     CreateSubcategoryAPIView, SubcategoryListAPIView, SubcategoryAPIView,
     ProductListAPIView, CreateProductAPIView, ProductAPIView,
     CommentListAPIView, CreateCommentAPIView, CommentAPIView,
     CreateRatingAPIView, RatingAPIView,RatingListAPIView,TopSellerAPIView
 )
+from rest_framework.routers import DefaultRouter
 
-
+router = DefaultRouter()
+router.register(r'categories', CategoryViewSet, basename='category')
 
 urlpatterns = [
     # Category
-    path('categories/create/', CreateCategoryAPIView.as_view(), name='create-category'),
-    path('categories/', CategoryListAPIView.as_view(), name='category-list'),
-    path('categories/<int:category_id>/', CategoryAPIView.as_view(), name='category-detail'),
+    #path('categories/create/', CreateCategoryAPIView.as_view(), name='create-category'),
+    #path('categories/', CategoryListAPIView.as_view(), name='category-list'),
+    #path('categories/<int:category_id>/', CategoryAPIView.as_view(), name='category-detail'),
+    path('', include(router.urls)),
 
     # Subcategory
     path('subcategories/create/', CreateSubcategoryAPIView.as_view(), name='create-subcategory'),

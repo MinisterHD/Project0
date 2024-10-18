@@ -1,3 +1,4 @@
+from rest_framework import viewsets
 from django.db.models import Q
 from .models import *
 from .serializers import *
@@ -17,21 +18,17 @@ from parler.utils.context import activate, switch_language
 from rest_framework.pagination import PageNumberPagination
 
 # Category
-class CreateCategoryAPIView(CreateAPIView):
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminUser]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
-    queryset = Category.objects.all()
 
     def create(self, request, *args, **kwargs):
         language = request.data.get('language', 'en')
         activate(language)
         return super().create(request, *args, **kwargs)
-
-class CategoryListAPIView(generics.ListAPIView):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -44,14 +41,6 @@ class CategoryListAPIView(generics.ListAPIView):
         queryset = queryset.active_translations(language_code=language)
         
         return queryset
-
-class CategoryAPIView(RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminOrReadOnly]
-    authentication_classes = [JWTAuthentication]
-    parser_classes = [JSONParser]
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
-    lookup_url_kwarg = 'category_id'
 
     def get_object(self):
         language = self.request.query_params.get('language', 'en')
@@ -83,7 +72,6 @@ class CategoryAPIView(RetrieveUpdateDestroyAPIView):
             return super().destroy(request, *args, **kwargs)
         except Exception as e:
             return Response({'error': f'An error occurred while deleting the category: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 # SubCategory
 class CreateSubcategoryAPIView(CreateAPIView):
     queryset = Subcategory.objects.all()
