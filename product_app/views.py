@@ -72,22 +72,20 @@ class CategoryViewSet(viewsets.ModelViewSet):
             return super().destroy(request, *args, **kwargs)
         except Exception as e:
             return Response({'error': f'An error occurred while deleting the category: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 # SubCategory
-class CreateSubcategoryAPIView(CreateAPIView):
+class SubcategoryViewSet(viewsets.ModelViewSet):
     queryset = Subcategory.objects.all()
     serializer_class = SubcategorySerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminUser]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
+    lookup_url_kwarg = 'subcategory_id'
 
     def create(self, request, *args, **kwargs):
         language = request.data.get('language', 'en')
         activate(language)
         return super().create(request, *args, **kwargs)
-
-class SubcategoryListAPIView(generics.ListAPIView):
-    queryset = Subcategory.objects.all()
-    serializer_class = SubcategorySerializer
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -96,14 +94,6 @@ class SubcategoryListAPIView(generics.ListAPIView):
             category_id = params['category']
             queryset = queryset.filter(category_id=category_id)
         return queryset
-
-class SubcategoryAPIView(RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminOrReadOnly]
-    authentication_classes = [JWTAuthentication]
-    parser_classes = [JSONParser]
-    queryset = Subcategory.objects.all()
-    serializer_class = SubcategorySerializer
-    lookup_url_kwarg = 'subcategory_id'
 
     def get_object(self):
         try:
