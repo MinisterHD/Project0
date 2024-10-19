@@ -9,14 +9,14 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework import generics
 from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.generics import (CreateAPIView, RetrieveUpdateDestroyAPIView, ListAPIView)
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly,IsAdminUser
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import ValidationError, NotFound
 from parler.utils.context import activate, switch_language
 from rest_framework.pagination import PageNumberPagination
-
+from django.db import transaction
 # Category
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
@@ -134,27 +134,29 @@ class ProductPagination(PageNumberPagination):
             'results': data
         })
 
-class CreateProductAPIView(CreateAPIView):
+class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminUser]
     authentication_classes = [JWTAuthentication]
-    parser_classes = [MultiPartParser]
-    permission_classes = [IsAdminUser]
+    parser_classes = [MultiPartParser, JSONParser]
+    pagination_class = ProductPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    search_fields = ['name']
+    lookup_url_kwarg = 'product_id'
 
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
         language = request.data.get('language', 'en')
         activate(language)
         try:
             return super().create(request, *args, **kwargs)
+        except ValidationError as e:
+            transaction.set_rollback(True)
+            return Response({'error': e.detail}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            transaction.set_rollback(True)
             return Response({'error': f'An error occurred while creating the product: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-class ProductListAPIView(ListAPIView):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ['name']
-    pagination_class = ProductPagination
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -195,13 +197,6 @@ class ProductListAPIView(ListAPIView):
 
         return queryset
 
-class ProductAPIView(RetrieveUpdateDestroyAPIView):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminOrReadOnly]
-    parser_classes = [MultiPartParser, JSONParser]
-    lookup_url_kwarg = 'product_id'
-
     def get_object(self):
         try:
             return super().get_object()
@@ -235,10 +230,13 @@ class ProductAPIView(RetrieveUpdateDestroyAPIView):
             return Response({'error': f'An error occurred while deleting the Product: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Comments
-class CreateCommentAPIView(generics.CreateAPIView):
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [JWTAuthentication]
+class CommentViewSet(viewsets.ModelViewSet):
+    queryset = Comment.objects.all()
     serializer_class = CommentSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrAdmin]
+    authentication_classes = [JWTAuthentication]
+    parser_classes = [JSONParser]
+    lookup_url_kwarg = 'comment_id'
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -252,21 +250,10 @@ class CreateCommentAPIView(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
-class CommentListAPIView(ListAPIView):
-    serializer_class = CommentSerializer
-
     def get_queryset(self):
-        product_id = self.kwargs['product_id']
-        return Comment.objects.filter(product_id=product_id)
-
-class CommentAPIView(RetrieveUpdateDestroyAPIView):
-    queryset = Comment.objects.all()
-    serializer_class = CommentSerializer
-    permission_classes = [IsOwnerOrAdmin]
-    parser_classes = [JSONParser]
-    lookup_url_kwarg = 'comment_id'
-
-    def get_queryset(self):
+        product_id = self.request.query_params.get('product_id')
+        if product_id:
+            return self.queryset.filter(product_id=product_id)
         if self.request.user.is_superuser:
             return self.queryset
         return self.queryset.filter(owner=self.request.user)
@@ -296,11 +283,20 @@ class CommentAPIView(RetrieveUpdateDestroyAPIView):
             return Response({'error': f'An error occurred while deleting the comment: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # Rating
-class CreateRatingAPIView(generics.CreateAPIView):
+class RatingViewSet(viewsets.ModelViewSet):
     queryset = Rating.objects.all()
-    serializer_class = RatingCreateSerializer
-    permission_classes = [IsAuthenticated]
+    serializer_class = RatingSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrAdmin]
     authentication_classes = [JWTAuthentication]
+    parser_classes = [JSONParser]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['product', 'user']
+    lookup_url_kwarg = 'rating_id'
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return RatingCreateSerializer if self.action == 'create' else RatingUpdateSerializer
+        return RatingSerializer
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -318,12 +314,6 @@ class CreateRatingAPIView(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-class RatingListAPIView(ListAPIView):
-    queryset = Rating.objects.all()
-    serializer_class = RatingSerializer
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['product', 'user']
-
     def get_queryset(self):
         queryset = super().get_queryset()
         params = self.request.query_params
@@ -337,13 +327,6 @@ class RatingListAPIView(ListAPIView):
             queryset = queryset.filter(user_id=user_id)
 
         return queryset
-
-class RatingAPIView(RetrieveUpdateDestroyAPIView):
-    ermission_classes = [IsOwnerOrAdmin]
-    authentication_classes = [JWTAuthentication]
-    queryset = Rating.objects.all()
-    serializer_class = RatingUpdateSerializer
-    lookup_url_kwarg = 'rating_id'
 
     def retrieve(self, request, *args, **kwargs):
         try:
@@ -369,8 +352,8 @@ class RatingAPIView(RetrieveUpdateDestroyAPIView):
         except Http404:
             return Response({'error': 'Rating not found.'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({'error': f'An error occurred while deleting the rating: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+            return Response({'error': f'An error occurred while deleting the rating: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)       
+
 #TopSellerProducts
 class TopSellerAPIView(ListAPIView):
     serializer_class = ProductSerializer
