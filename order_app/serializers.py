@@ -90,8 +90,6 @@ class CartSerializer(serializers.ModelSerializer):
         model = Cart
         fields = ['id', 'user', 'created_at', 'items'] 
 
-
-
 class WishlistItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)  
 
