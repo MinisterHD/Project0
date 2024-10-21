@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils.text import slugify
 from .models import *
 from django.core.files.storage import default_storage
 from parler_rest.serializers import TranslatableModelSerializer, TranslatedFieldsField
@@ -39,7 +40,7 @@ class ProductSerializer(TranslatableModelSerializer):
 
     slugname = serializers.CharField(required=False)
     stock = serializers.IntegerField(required=False)
-    price = serializers.IntegerField(required=False)
+    price = serializers.FloatField(required=False)
 
     translations = serializers.SerializerMethodField(read_only=True)
     category_name_en = serializers.SerializerMethodField(read_only=True)
@@ -91,6 +92,17 @@ class ProductSerializer(TranslatableModelSerializer):
         translations_fa_name = validated_data.pop('translations_fa_name', None)
         translations_fa_description = validated_data.pop('translations_fa_description', None)
         images = validated_data.pop('images', None)
+
+        if 'slugname' not in validated_data or not validated_data['slugname']:
+            if not translations_en_name:
+                raise ValueError("English name is required to generate slugname.")
+            base_slug = slugify(translations_en_name)
+            slug = base_slug
+            counter = 1
+            while Product.objects.filter(slugname=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            validated_data['slugname'] = slug
 
         product = Product.objects.create(**validated_data)
 

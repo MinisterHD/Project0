@@ -7,6 +7,7 @@ from asgiref.sync import async_to_sync
 from django.dispatch import receiver
 from django.apps import apps
 
+
 class Category(TranslatableModel):
     translations = TranslatedFields(
         name=models.CharField(max_length=255, null=False, blank=False,unique=True), 
@@ -42,13 +43,13 @@ class Product(TranslatableModel):
         description=models.TextField(max_length=2000, null=True, blank=True),
     )
     brand = models.CharField(max_length=50, default='No Brand', null=True, blank=True)
-    slugname = models.SlugField(max_length=255, unique=True, default='default-slug')
-    price = models.PositiveIntegerField(null=False, blank=False)
+    slugname = models.SlugField(max_length=255, unique=True)
+    price = models.FloatField (null=False, blank=False)
     discount_percentage = models.PositiveIntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(100)], 
         default=0
     )
-    price_after_discount = models.PositiveIntegerField(null=True, blank=True)
+    price_after_discount = models.FloatField (null=True, blank=True)
     stock = models.PositiveIntegerField(default=0)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     subcategory = models.ForeignKey(Subcategory, on_delete=models.CASCADE, blank=True, null=True)
@@ -65,7 +66,7 @@ class Product(TranslatableModel):
 
     def __str__(self):
         return self.name
-
+    
 
 class Comment(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='comments',null=False,blank=False)

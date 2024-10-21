@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 @receiver(pre_save, sender=Product)
 def calculate_price_after_discount(sender, instance, **kwargs):
     if instance.price and instance.discount_percentage:
-        discount = instance.discount_percentage / 100
+        discount = instance.discount_percentage / 100.0
         instance.price_after_discount = instance.price * (1 - discount)
         logger.info(f"Calculated price after discount for product {instance.id}: {instance.price_after_discount}")
 

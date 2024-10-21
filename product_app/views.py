@@ -7,7 +7,6 @@ from django.http import Http404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework import generics
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly,IsAdminUser
@@ -17,6 +16,7 @@ from rest_framework.exceptions import ValidationError, NotFound
 from parler.utils.context import activate, switch_language
 from rest_framework.pagination import PageNumberPagination
 from django.db import transaction
+
 # Category
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
