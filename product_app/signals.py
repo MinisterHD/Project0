@@ -19,10 +19,10 @@ def calculate_price_after_discount(sender, instance, **kwargs):
 @receiver(pre_save, sender=Product)
 def calculate_price_in_rials(sender, instance, **kwargs):
     if instance.price:
-        instance.price_in_rials = instance.price * 60000
+        instance.price_in_rials = instance.price * 600000
         logger.info(f"Calculated price in rials for product {instance.id}: {instance.price_in_rials}")
     if instance.price_after_discount:
-        instance.price_after_discount_in_rials = instance.price_after_discount * 60000
+        instance.price_after_discount_in_rials = instance.price_after_discount * 600000
         logger.info(f"Calculated price after discount in rials for product {instance.id}: {instance.price_after_discount_in_rials}")
 
 @receiver(pre_save, sender=Product)
