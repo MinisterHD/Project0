@@ -145,9 +145,6 @@ class ProductViewSet(viewsets.ModelViewSet):
     search_fields = ['name']
     lookup_url_kwarg = 'product_id'
 
-    def get_serializer_context(self):
-        return {'request': self.request}
-
     @transaction.atomic
     def create(self, request, *args, **kwargs):
         language = request.data.get('language', 'en')
@@ -231,6 +228,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             return super().destroy(request, *args, **kwargs)
         except Exception as e:
             return Response({'error': f'An error occurred while deleting the Product: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 # Comments
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
