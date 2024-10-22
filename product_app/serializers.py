@@ -26,6 +26,13 @@ class CategorySerializer(TranslatableModelSerializer):
         model = Category
         fields = ['id', 'translations', 'slugname', 'sub_categories']
 
+class AbsoluteURLField(serializers.ImageField):
+    def to_representation(self, value):
+        request = self.context.get('request', None)
+        if request is not None:
+            return request.build_absolute_uri(value.url)
+        return super().to_representation(value)
+    
 class ProductSerializer(TranslatableModelSerializer):
     translations_en_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
     translations_en_description = serializers.CharField(write_only=True, required=False, allow_blank=True)
@@ -37,6 +44,11 @@ class ProductSerializer(TranslatableModelSerializer):
         write_only=True,
         required=False
     )
+
+    image1 = AbsoluteURLField()
+    image2 = AbsoluteURLField()
+    image3 = AbsoluteURLField()
+    image4 = AbsoluteURLField()
 
     slugname = serializers.CharField(required=False)
     stock = serializers.IntegerField(required=False)

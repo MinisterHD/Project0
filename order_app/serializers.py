@@ -90,6 +90,7 @@ class CartItemSerializer(serializers.ModelSerializer):
         model = CartItem
         exclude = ['cart']
 
+
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(source='cartitem_set', many=True)
     total_price = serializers.SerializerMethodField()
