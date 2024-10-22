@@ -21,26 +21,30 @@ class OrderItemSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     order_items = OrderItemSerializer(many=True)
     total_price = serializers.FloatField(read_only=True)
+    total_price_in_rials = serializers.FloatField(read_only=True)
     user = serializers.PrimaryKeyRelatedField(read_only=True) 
     user_first_name = serializers.CharField(source='user.first_name', read_only=True)
     user_last_name = serializers.CharField(source='user.last_name', read_only=True)
     user_phone_number = serializers.CharField(source='user.phone_number', read_only=True)
     class Meta:
         model = Order
-        fields = ["id",'user', 'user_first_name', 'user_last_name', 'user_phone_number','shipped_at', 'delivery_address', 'delivery_status', 'total_price', 'order_date', 'delivery_date', 'order_items']
-        read_only_fields = ['id', 'user', 'order_date', 'total_price']  
+        fields = ["id",'user', 'user_first_name', 'user_last_name', 'user_phone_number','shipped_at', 'delivery_address', 'delivery_status', 'total_price','total_price_in_rials', 'order_date', 'delivery_date', 'order_items']
+        read_only_fields = ['id', 'user', 'order_date', 'total_price','total_price_in_rials']  
     def create(self, validated_data):
         order_items_data = validated_data.pop('order_items')
         with transaction.atomic():
             order = Order.objects.create(**validated_data)
+            total_price_in_rials=0
             total_price = 0
             for item_data in order_items_data:
                 product = item_data['product']
                 quantity = item_data['quantity']
                 OrderItem.objects.create(order=order, product=product, quantity=quantity)
-                total_price += product.price * quantity
+                total_price += product.price_after_discount * quantity
+                total_price_in_rials += product.price_after_discount_in_rials * quantity
 
             order.total_price = total_price
+            order.total_price_in_rials=total_price_in_rials
             order.save()
 
         return order
@@ -65,13 +69,16 @@ class OrderSerializer(serializers.ModelSerializer):
         if order_items_data is not None:
             instance.order_items.all().delete()
             total_price = 0
+            total_price_in_rials=0
             for item_data in order_items_data:
                 product = item_data['product']
                 quantity = item_data['quantity']
                 OrderItem.objects.create(order=instance, product=product, quantity=quantity)
                 total_price += product.price_after_discount * quantity
+                total_price_in_rials += product.price_after_discount_in_rials * quantity
 
             instance.total_price = total_price
+            instance.total_price_in_rials = total_price_in_rials
 
         instance.save()
         return instance
@@ -86,14 +93,27 @@ class CartItemSerializer(serializers.ModelSerializer):
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(source='cartitem_set', many=True)
     total_price = serializers.SerializerMethodField()
+    total_price_in_rials = serializers.SerializerMethodField()
+    def get_total_price_in_rials(self, obj):
+        total = 0
+        for item in obj.cartitem_set.all():
+            print(item.product.price_after_discount_in_rials)
+            total += item.quantity * item.product.price_after_discount_in_rials
+        return total
     def get_total_price(self, obj):
         total = 0
         for item in obj.cartitem_set.all():
+            print(item.product.price_after_discount)
             total += item.quantity * item.product.price_after_discount
         return total
+    
+
+            
+       
+    
     class Meta:
         model = Cart
-        fields = ['total_price','id', 'user', 'created_at', 'items']  
+        fields = ['total_price','id', 'user', 'created_at', 'items','total_price_in_rials']  
 
 
 
