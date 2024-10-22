@@ -41,6 +41,9 @@ class ProductSerializer(TranslatableModelSerializer):
     slugname = serializers.CharField(required=False)
     stock = serializers.IntegerField(required=False)
     price = serializers.FloatField(required=False)
+    price_after_discount = serializers.FloatField(read_only=True)
+    price_in_rials = serializers.FloatField(read_only=True)
+    price_after_discount_in_rials = serializers.FloatField(read_only=True)
 
     translations = serializers.SerializerMethodField(read_only=True)
     category_name_en = serializers.SerializerMethodField(read_only=True)

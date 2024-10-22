@@ -20,7 +20,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     order_items = OrderItemSerializer(many=True)
-    total_price = serializers.IntegerField(read_only=True)
+    total_price = serializers.FloatField(read_only=True)
     user = serializers.PrimaryKeyRelatedField(read_only=True) 
     user_first_name = serializers.CharField(source='user.first_name', read_only=True)
     user_last_name = serializers.CharField(source='user.last_name', read_only=True)
@@ -69,7 +69,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 product = item_data['product']
                 quantity = item_data['quantity']
                 OrderItem.objects.create(order=instance, product=product, quantity=quantity)
-                total_price += product.price * quantity
+                total_price += product.price_after_discount * quantity
 
             instance.total_price = total_price
 
@@ -77,18 +77,25 @@ class OrderSerializer(serializers.ModelSerializer):
         return instance
 
 class CartItemSerializer(serializers.ModelSerializer):
-    product = ProductSerializer(read_only=True) 
+    product = ProductSerializer(read_only=True)
 
     class Meta:
         model = CartItem
-        exclude = ['cart'] 
+        exclude = ['cart']
 
 class CartSerializer(serializers.ModelSerializer):
-    items = CartItemSerializer(source='cartitem_set', many=True)  
-
+    items = CartItemSerializer(source='cartitem_set', many=True)
+    total_price = serializers.SerializerMethodField()
+    def get_total_price(self, obj):
+        total = 0
+        for item in obj.cartitem_set.all():
+            total += item.quantity * item.product.price_after_discount
+        return total
     class Meta:
         model = Cart
-        fields = ['id', 'user', 'created_at', 'items'] 
+        fields = ['total_price','id', 'user', 'created_at', 'items']  
+
+
 
 class WishlistItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)  

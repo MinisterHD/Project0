@@ -45,11 +45,13 @@ class Product(TranslatableModel):
     brand = models.CharField(max_length=50, default='No Brand', null=True, blank=True)
     slugname = models.SlugField(max_length=255, unique=True)
     price = models.FloatField (null=False, blank=False)
+    price_in_rials=models.FloatField(null=True,blank=True)
     discount_percentage = models.PositiveIntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(100)], 
         default=0
     )
     price_after_discount = models.FloatField (null=True, blank=True)
+    price_after_discount_in_rials=models.FloatField(null=True,blank=True)
     stock = models.PositiveIntegerField(default=0)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     subcategory = models.ForeignKey(Subcategory, on_delete=models.CASCADE, blank=True, null=True)
