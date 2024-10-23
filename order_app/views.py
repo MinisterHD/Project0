@@ -106,8 +106,15 @@ class CartViewSet(viewsets.ViewSet):
     def get_cart(self, user):
         cart, created = Cart.objects.get_or_create(user=user)
         return cart
+
     def get_serializer_context(self):
         return {'request': self.request}
+
+    def get_serializer(self, *args, **kwargs):
+        serializer_class = CartSerializer
+        kwargs['context'] = self.get_serializer_context()
+        return serializer_class(*args, **kwargs)
+
     @action(detail=False, methods=['post'], url_path='add', permission_classes=[IsAuthenticated])
     def add_to_cart(self, request):
         user = request.user
@@ -128,7 +135,7 @@ class CartViewSet(viewsets.ViewSet):
                 cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product)
                 cart_item.quantity += quantity
                 cart_item.save()
-                cart_serializer = CartSerializer(cart)
+                cart_serializer = self.get_serializer(cart)
                 return Response({
                     "detail": "Product added to cart.",
                     "cart": cart_serializer.data
@@ -140,7 +147,7 @@ class CartViewSet(viewsets.ViewSet):
     def retrieve_cart_item(self, request, pk=None, product_id=None):
         try:
             cart_item = CartItem.objects.get(cart__user_id=pk, product_id=product_id)
-            cart_serializer = CartSerializer(cart_item.cart)
+            cart_serializer = self.get_serializer(cart_item.cart)
             return Response(cart_serializer.data, status=status.HTTP_200_OK)
         except CartItem.DoesNotExist:
             return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -156,7 +163,7 @@ class CartViewSet(viewsets.ViewSet):
                 return Response({"detail": "Invalid quantity."}, status=status.HTTP_400_BAD_REQUEST)
             cart_item.quantity = quantity
             cart_item.save()
-            cart_serializer = CartSerializer(cart_item.cart)
+            cart_serializer = self.get_serializer(cart_item.cart)
             return Response({
                 "detail": "Cart item updated.",
                 "cart": cart_serializer.data
@@ -172,7 +179,7 @@ class CartViewSet(viewsets.ViewSet):
             cart_item = CartItem.objects.get(cart__user_id=pk, product_id=product_id)
             cart = cart_item.cart
             cart_item.delete()
-            cart_serializer = CartSerializer(cart)
+            cart_serializer = self.get_serializer(cart)
             return Response({
                 "detail": "Product removed from cart.",
                 "cart": cart_serializer.data
@@ -186,15 +193,15 @@ class CartViewSet(viewsets.ViewSet):
     def retrieve_cart(self, request, pk=None):
         try:
             cart = Cart.objects.get(user_id=pk)
-            cart_serializer = CartSerializer(cart)
+            cart_serializer = self.get_serializer(cart)
             return Response(cart_serializer.data, status=status.HTTP_200_OK)
         except Cart.DoesNotExist:
             return Response({"detail": "Cart not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 #WishList
+
 class WishlistViewSet(viewsets.ModelViewSet):
     queryset = Wishlist.objects.all()
     serializer_class = WishlistSerializer
@@ -206,8 +213,15 @@ class WishlistViewSet(viewsets.ModelViewSet):
     search_fields = ['user__username']
     ordering_fields = ['user__username']
     ordering = ['user__username']
+
     def get_serializer_context(self):
         return {'request': self.request}
+
+    def get_serializer(self, *args, **kwargs):
+        serializer_class = self.get_serializer_class()
+        kwargs['context'] = self.get_serializer_context()
+        return serializer_class(*args, **kwargs)
+
     def get_object(self):
         user_id = self.kwargs.get('user_id')
         try:
@@ -273,7 +287,6 @@ class WishlistViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error listing wishlists: {str(e)}")
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    permission_classes = [IsOwnerOrAdmin]
 
     def delete(self, request, *args, **kwargs):
         user_id = self.kwargs.get('user_id')
