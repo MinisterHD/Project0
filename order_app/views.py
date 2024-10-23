@@ -106,7 +106,8 @@ class CartViewSet(viewsets.ViewSet):
     def get_cart(self, user):
         cart, created = Cart.objects.get_or_create(user=user)
         return cart
-
+    def get_serializer_context(self):
+        return {'request': self.request}
     @action(detail=False, methods=['post'], url_path='add', permission_classes=[IsAuthenticated])
     def add_to_cart(self, request):
         user = request.user
@@ -205,7 +206,8 @@ class WishlistViewSet(viewsets.ModelViewSet):
     search_fields = ['user__username']
     ordering_fields = ['user__username']
     ordering = ['user__username']
-
+    def get_serializer_context(self):
+        return {'request': self.request}
     def get_object(self):
         user_id = self.kwargs.get('user_id')
         try:
