@@ -42,8 +42,10 @@ class OrderViewSet(viewsets.ModelViewSet):
     ordering_fields = ['delivery_date', 'order_date']
     ordering = ['-order_date']
     pagination_class = CustomPageNumberPagination
+
     def get_serializer_context(self):
         return {'request': self.request}
+
     def get_queryset(self):
         queryset = super().get_queryset().prefetch_related('order_items__product')
         user_id = self.request.query_params.get('user_id')
@@ -55,6 +57,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             order = serializer.save(user=self.request.user)
             total_price = 0
+            cart = Cart.objects.get(user=self.request.user)
             for item_data in self.request.data.get('order_items', []):
                 product = Product.objects.get(id=item_data['product'])
                 quantity = item_data['quantity']
@@ -67,6 +70,8 @@ class OrderViewSet(viewsets.ModelViewSet):
                 total_price += product.price * quantity
             order.total_price = total_price
             order.save()
+
+            cart.cart_items.all().delete()
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
@@ -201,7 +206,6 @@ class CartViewSet(viewsets.ViewSet):
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 #WishList
-
 class WishlistViewSet(viewsets.ModelViewSet):
     queryset = Wishlist.objects.all()
     serializer_class = WishlistSerializer
