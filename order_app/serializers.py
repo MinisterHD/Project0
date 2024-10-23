@@ -6,7 +6,7 @@ from django.db import transaction
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all()) 
-    product_detail=ProductDetailSerializer(read_only=True)
+    product_detail=ProductDetailSerializer(source='product', read_only=True)
     class Meta:
         model = OrderItem
         fields = ['product', 'quantity','product_detail']
@@ -49,17 +49,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         return order
 
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        representation['order_items'] = [
-            {
-                'product': item.product.id,
-                'quantity': item.quantity,
-                'product_detail': ProductDetailSerializer(item.product).data
-            }
-            for item in instance.order_items.all()
-        ]
-        return representation
+
 
     def update(self, instance, validated_data):
         order_items_data = validated_data.pop('order_items', None)

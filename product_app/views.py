@@ -9,7 +9,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.generics import ListAPIView
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly,IsAdminUser
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly,IsAdminUser,AllowAny
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import ValidationError, NotFound
@@ -21,9 +21,15 @@ from django.db import transaction
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminUser]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            self.permission_classes = [AllowAny]
+        else:
+            self.permission_classes = [IsAuthenticatedOrReadOnly, IsAdminUser]
+        return super().get_permissions()
 
     def create(self, request, *args, **kwargs):
         language = request.data.get('language', 'en')
@@ -72,15 +78,21 @@ class CategoryViewSet(viewsets.ModelViewSet):
             return super().destroy(request, *args, **kwargs)
         except Exception as e:
             return Response({'error': f'An error occurred while deleting the category: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+        
 # SubCategory
 class SubcategoryViewSet(viewsets.ModelViewSet):
     queryset = Subcategory.objects.all()
     serializer_class = SubcategorySerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsAdminUser]
     authentication_classes = [JWTAuthentication]
     parser_classes = [JSONParser]
     lookup_url_kwarg = 'subcategory_id'
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            self.permission_classes = [AllowAny]
+        else:
+            self.permission_classes = [IsAuthenticatedOrReadOnly, IsAdminUser]
+        return super().get_permissions()
 
     def create(self, request, *args, **kwargs):
         language = request.data.get('language', 'en')
@@ -134,6 +146,7 @@ class ProductPagination(PageNumberPagination):
             'results': data
         })
 
+
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
@@ -164,6 +177,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         category_id = params.get('category')
         subcategory_id = params.get('subcategory')
+        
         if category_id or subcategory_id:
             try:
                 if category_id:
@@ -173,8 +187,12 @@ class ProductViewSet(viewsets.ModelViewSet):
             except (Category.DoesNotExist, Subcategory.DoesNotExist):
                 raise ValidationError("Invalid category or subcategory ID(s) provided.")
 
-        if category_id or subcategory_id:
-            queryset = queryset.filter(Q(category_id=category_id) | Q(subcategory_id=subcategory_id))
+        if category_id and subcategory_id:
+            queryset = queryset.filter(category_id=category_id, subcategory_id=subcategory_id)
+        elif category_id:
+            queryset = queryset.filter(category_id=category_id)
+        elif subcategory_id:
+            queryset = queryset.filter(subcategory_id=subcategory_id)
 
         min_price = params.get('minPrice')
         max_price = params.get('maxPrice')
