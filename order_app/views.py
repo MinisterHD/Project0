@@ -71,7 +71,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             order.total_price = total_price
             order.save()
 
-            cart.items.all().delete()
+            cart.cartitem_set.all().delete()
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
