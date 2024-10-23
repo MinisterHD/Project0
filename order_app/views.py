@@ -42,7 +42,8 @@ class OrderViewSet(viewsets.ModelViewSet):
     ordering_fields = ['delivery_date', 'order_date']
     ordering = ['-order_date']
     pagination_class = CustomPageNumberPagination
-
+    def get_serializer_context(self):
+        return {'request': self.request}
     def get_queryset(self):
         queryset = super().get_queryset().prefetch_related('order_items__product')
         user_id = self.request.query_params.get('user_id')
