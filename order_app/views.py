@@ -227,8 +227,9 @@ class WishlistViewSet(viewsets.ModelViewSet):
         return serializer_class(*args, **kwargs)
 
     def get_object(self):
-        user_id = self.kwargs.get('user_id')
+        user_id = self.kwargs.get('pk')
         try:
+            
             wishlist, created = Wishlist.objects.get_or_create(user_id=user_id)
             return wishlist
         except Wishlist.DoesNotExist:
@@ -293,7 +294,7 @@ class WishlistViewSet(viewsets.ModelViewSet):
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request, *args, **kwargs):
-        user_id = self.kwargs.get('user_id')
+        user_id = self.kwargs.get('pk')
         product_id = self.kwargs.get('product_id')
 
         try:
