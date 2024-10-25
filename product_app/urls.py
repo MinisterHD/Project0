@@ -47,7 +47,7 @@ urlpatterns = [
  
     
     #TopSellerList
-    path('products/top-seller/', TopSellerAPIView.as_view(), name='top-seller'),
+    path('top-seller/', TopSellerAPIView.as_view(), name='top-seller'),
 
 
 

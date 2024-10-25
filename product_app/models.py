@@ -6,7 +6,7 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.dispatch import receiver
 from django.apps import apps
-
+from parler.utils.context import switch_language
 
 class Category(TranslatableModel):
     translations = TranslatedFields(
@@ -65,9 +65,13 @@ class Product(TranslatableModel):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     sales_count = models.IntegerField(default=0)
-
+    
     def __str__(self):
-        return self.name
+        try:
+            with switch_language(self, 'en'):  
+                return self.name
+        except Exception:
+            return f"Product ID: {self.id} (No translation available)"
     
 
 class Comment(models.Model):

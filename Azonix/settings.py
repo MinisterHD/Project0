@@ -177,16 +177,14 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     }
 PARLER_LANGUAGES = {
-    None: (
-        {'code': 'en'},
-        {'code': 'fa'},
-    ),
+    None: [
+        {'code': 'en', 'fallbacks': ['fa']},  # English with French as a fallback
+        {'code': 'fa', 'fallbacks': ['en']},  # French with English as a fallback
+    ],
     'default': {
-        'fallback': 'en',  
-        'hide_untranslated': False, 
+        'fallbacks': ['en'],  # Default fallback to English
     }
 }
-
 
 
 
@@ -207,6 +205,7 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     
 }
+
 '''
 LOGGING = {
     'version': 1,

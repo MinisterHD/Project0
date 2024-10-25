@@ -26,6 +26,7 @@ class CategorySerializer(TranslatableModelSerializer):
         model = Category
         fields = ['id', 'translations', 'slugname', 'sub_categories']
 
+
 class ProductSerializer(TranslatableModelSerializer):
     translations_en_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
     translations_en_description = serializers.CharField(write_only=True, required=False, allow_blank=True)
@@ -184,6 +185,7 @@ class ProductSerializer(TranslatableModelSerializer):
 
         instance.save()
         return instance
+ 
     
 class ProductDetailSerializer(TranslatableModelSerializer):
     translations = TranslatedFieldsField(shared_model=Product)

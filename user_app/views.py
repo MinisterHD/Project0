@@ -14,7 +14,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils.translation import gettext_lazy as _
 import logging
 from .permissions import IsOwnerOrAdmin
-from rest_framework.generics import CreateAPIView, GenericAPIView  # Add these imports
+from rest_framework.generics import CreateAPIView, GenericAPIView  
 
 logger = logging.getLogger(__name__)
 # Auth

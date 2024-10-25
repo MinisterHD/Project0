@@ -16,7 +16,9 @@ from rest_framework.exceptions import ValidationError, NotFound
 from parler.utils.context import activate, switch_language
 from rest_framework.pagination import PageNumberPagination
 from django.db import transaction
-
+from rest_framework.decorators import action
+import logging
+logger = logging.getLogger(__name__)
 # Category
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
@@ -146,7 +148,6 @@ class ProductPagination(PageNumberPagination):
             'results': data
         })
 
-
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
@@ -223,6 +224,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def retrieve(self, request, *args, **kwargs):
         try:
+            print("retrieve method called")
             return super().retrieve(request, *args, **kwargs)
         except Exception as e:
             return Response({'error': f'An error occurred while retrieving the Product: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -372,9 +374,13 @@ class RatingViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': f'An error occurred while deleting the rating: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)       
 
-#TopSellerProducts
+#TopSeller
 class TopSellerAPIView(ListAPIView):
+    queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    queryset = Product.objects.order_by('-sales_count')[:10]
+    permission_classes = [AllowAny]
+    authentication_classes = []
 
 
+    def get_queryset(self):
+        return self.queryset.order_by('-sales_count')[:10]
