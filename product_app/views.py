@@ -9,14 +9,13 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.generics import ListAPIView
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly,IsAdminUser,AllowAny
+from rest_framework.permissions import  IsAuthenticatedOrReadOnly,IsAdminUser,AllowAny
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import ValidationError, NotFound
 from parler.utils.context import activate, switch_language
 from rest_framework.pagination import PageNumberPagination
 from django.db import transaction
-from rest_framework.decorators import action
 import logging
 logger = logging.getLogger(__name__)
 # Category
@@ -148,6 +147,7 @@ class ProductPagination(PageNumberPagination):
             'results': data
         })
 
+
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
@@ -156,7 +156,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     parser_classes = [MultiPartParser, JSONParser]
     pagination_class = ProductPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ['name']
+    search_fields = ['translations__name']
     lookup_url_kwarg = 'product_id'
 
     @transaction.atomic
@@ -198,11 +198,11 @@ class ProductViewSet(viewsets.ModelViewSet):
         min_price = params.get('minPrice')
         max_price = params.get('maxPrice')
         if min_price and max_price:
-            queryset = queryset.filter(price_after_discount__gte=float(min_price), price_after_discount__lte=float(max_price))
+            queryset = queryset.filter(price_after_discount__gte=float(min_price), price_after_discount__lte=float(max(max_price)))
         elif min_price:
-            queryset = queryset.filter(price_after_discount__gte=float(min_price))
+            queryset = queryset.filter(price_after_discount__gte(float(min_price)))
         elif max_price:
-            queryset = queryset.filter(price_after_discount__lte=float(max_price))
+            queryset = queryset.filter(price_after_discount__lte(float(max_price)))
 
         sort_field = params.get('sort', 'category')
         if sort_field:
@@ -213,6 +213,10 @@ class ProductViewSet(viewsets.ModelViewSet):
             queryset = queryset.order_by('-price_after_discount')
         else:
             queryset = queryset.order_by('price_after_discount')
+
+        search_query = params.get('search')
+        if search_query:
+            queryset = queryset.filter(Q(translations__name__icontains=search_query))
 
         return queryset
 
